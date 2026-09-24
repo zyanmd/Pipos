@@ -26,7 +26,7 @@
 
 Dapatkan versi terbaru aplikasi Pipos melalui tautan di bawah ini:
 
-* [Unduh APK Terbaru (Releases)](https://github.com/username/pipos/releases)
+* [Unduh APK Terbaru (Releases)](https://github.com/zyanmd/pipos/releases)
 
 ---
 
