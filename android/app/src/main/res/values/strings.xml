@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_latest_description">Menampilkan anime rilis terbaru secara real-time langsung di layar utama.</string>
+    <string name="widget_bookmark_description">Lanjutkan tontonan episode anime dan daftar bookmark terakhirmu.</string>
+</resources>
+

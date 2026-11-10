@@ -1,0 +1,64 @@
+name: moko
+description: Moko - streaming anime & reading comics.
+publish_to: 'none'
+version: 1.2.4+2044
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+  flutter: '>=3.19.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+
+  # Networking
+  dio: ^5.4.0
+  connectivity_plus: ^6.1.0
+
+  # State management
+  provider: ^6.1.1
+
+  # Storage
+  shared_preferences: ^2.3.0
+  path_provider: ^2.1.2
+
+  # Images & caching
+  cached_network_image: ^3.3.0
+  shimmer: ^3.0.0
+  photo_view: ^0.14.0
+
+  # Video player
+  video_player: ^2.9.2
+  fvp: ^0.39.0
+  webview_flutter: ^4.10.0
+  webview_flutter_android: ^4.14.1
+  webview_flutter_web: ^0.2.3+4
+
+  # UI & utility
+  google_fonts: ^6.1.0
+  flutter_svg: ^2.0.9
+  intl: 0.20.3
+  image_picker: ^1.0.4
+  wakelock_plus: ^1.8.0
+  url_launcher: ^6.3.2
+  google_mobile_ads: ^9.1.0
+  google_sign_in: ^6.2.2
+  crypto: ^3.0.3
+  onesignal_flutter: 5.5.2
+
+  web: any
+  flutter_displaymode: ^0.7.0
+  home_widget: ^0.10.0
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/
+  # Fonts are loaded at runtime via the google_fonts package
+  # (Poppins for display, Inter for body). No local font files required.

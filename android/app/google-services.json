@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "654557227996",
+    "project_id": "boreal-card-479101-h9",
+    "storage_bucket": "boreal-card-479101-h9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:654557227996:android:930e63b915bcfc06ba7cc5",
+        "android_client_info": {
+          "package_name": "com.moko.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "654557227996-9m59ep46la0ct1ojaq6n06g1nsfdpc3f.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.moko.app",
+            "certificate_hash": "9da4edb96d4e4502616fc48e7e61b2b72595341e"
+          }
+        },
+        {
+          "client_id": "654557227996-vurfir2n689tkhcdde2mjlmbqegehgq9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBSVUfyiahfRIYNbQ2Gjm3hoE5afLgtiz8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

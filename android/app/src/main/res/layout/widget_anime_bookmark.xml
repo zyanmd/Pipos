@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_bg"
+    android:padding="10dp">
+
+    <!-- Header -->
+    <LinearLayout
+        android:id="@+id/header_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingBottom="6dp">
+
+        <TextView
+            android:id="@+id/app_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="MOKO"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/badge_category"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/widget_badge_bg"
+            android:paddingHorizontal="7dp"
+            android:paddingVertical="2dp"
+            android:text="LANJUT NONTON"
+            android:textColor="#00D2FF"
+            android:textStyle="bold"
+            android:textSize="9sp" />
+
+        <TextView
+            android:id="@+id/widget_count_badge"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="end"
+            android:text="Riwayat &amp; Bookmark"
+            android:textColor="#8E8E93"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <!-- Divider Line -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#1FFFFFFF"
+        android:layout_marginBottom="4dp" />
+
+    <!-- Empty View -->
+    <TextView
+        android:id="@+id/widget_empty_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text="Belum ada riwayat tontonan."
+        android:textColor="#8E8E93"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
+    <!-- Scrollable ListView (Displays 5+ items) -->
+    <ListView
+        android:id="@+id/widget_list"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:divider="#0DFFFFFF"
+        android:dividerHeight="1dp"
+        android:scrollbars="none" />
+
+</LinearLayout>
