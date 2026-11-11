@@ -43,6 +43,7 @@ import '../../update/data/models/app_update_model.dart';
 import '../../update/presentation/app_update_dialog.dart';
 import '../../update/services/app_update_service.dart';
 import '../../zpic/presentation/zpic_home_screen.dart';
+import '../../jav/presentation/jav_home_screen.dart';
 import '../../../core/services/adult_content_service.dart';
 
 /// Clean Modern Frosted Profile & Settings Screen matching AnimeHomeScreen.
@@ -1227,6 +1228,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   setState(() {});
                                 },
                               ),
+                            ),
+                            _buildGlassTile(
+                              icon: CupertinoIcons.film_fill,
+                              iconColor: const Color(0xFFFF2D55),
+                              title: 'Javtiful (JAV)',
+                              subtitle: 'Streaming Film & Video JAV HD',
+                              isDark: isDark,
+                              showChevron: true,
+                              onTap: () {
+                                HapticFeedback.selectionClick();
+                                Navigator.push(
+                                  context,
+                                  CupertinoPageRoute(builder: (_) => const JavHomeScreen()),
+                                );
+                              },
                             ),
                             _buildGlassTile(
                               icon: CupertinoIcons.play_circle_fill,

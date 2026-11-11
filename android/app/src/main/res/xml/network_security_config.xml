@@ -7,7 +7,6 @@
         </trust-anchors>
     </base-config>
     <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="true">103.119.237.37</domain>
         <domain includeSubdomains="true">sfile.co</domain>
         <domain includeSubdomains="true">nekopoi.click</domain>
         <domain includeSubdomains="true">playmogo.com</domain>

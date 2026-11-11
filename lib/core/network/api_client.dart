@@ -62,42 +62,57 @@ class TokenStore {
   }
 
   static String? _guestToken;
+  static Future<String?>? _inFlightGuestToken;
 
   static Future<String?> ensureValidToken() async {
     final userToken = await access;
     if (userToken != null && userToken.isNotEmpty) return userToken;
     if (_guestToken != null && _guestToken!.isNotEmpty) return _guestToken;
+    if (_inFlightGuestToken != null) return _inFlightGuestToken;
 
-    try {
-      final dio = Dio(BaseOptions(
-        baseUrl: ApiConfig.apiBase,
-        connectTimeout: const Duration(seconds: 8),
-        receiveTimeout: const Duration(seconds: 8),
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': ApiClient.userAgent,
-        },
-      ),);
-      final resp = await dio.post(
-        ApiEndpoints.authGoogleLogin,
-        data: {
-          'email': 'guest_public@moko.app',
-          'google_id': 'moko_guest_00000000001',
-          'display_name': 'Tamu Moko',
-        },
-      );
-      if (resp.statusCode == 200 && resp.data is Map) {
-        final d = resp.data as Map;
-        final tok = d['access_token'] ??
-            d['token'] ??
-            (d['data'] is Map ? (d['data']['access_token'] ?? d['data']['token']) : null);
-        if (tok is String && tok.isNotEmpty) {
-          _guestToken = tok;
-          return tok;
+    _inFlightGuestToken = () async {
+      try {
+        final dio = Dio(BaseOptions(
+          baseUrl: ApiConfig.apiBase,
+          connectTimeout: const Duration(seconds: 5),
+          receiveTimeout: const Duration(seconds: 5),
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': ApiClient.userAgent,
+          },
+        ),);
+        dio.httpClientAdapter = IOHttpClientAdapter(
+          createHttpClient: () {
+            final client = HttpClient();
+            client.badCertificateCallback = (cert, host, port) => true;
+            return client;
+          },
+        );
+        final resp = await dio.post(
+          ApiEndpoints.authGoogleLogin,
+          data: {
+            'email': 'guest_public@moko.app',
+            'google_id': 'moko_guest_00000000001',
+            'display_name': 'Tamu Moko',
+          },
+        );
+        if (resp.statusCode == 200 && resp.data is Map) {
+          final d = resp.data as Map;
+          final tok = d['access_token'] ??
+              d['token'] ??
+              (d['data'] is Map ? (d['data']['access_token'] ?? d['data']['token']) : null);
+          if (tok is String && tok.isNotEmpty) {
+            _guestToken = tok;
+            return tok;
+          }
         }
+      } catch (_) {} finally {
+        _inFlightGuestToken = null;
       }
-    } catch (_) {}
-    return null;
+      return null;
+    }();
+
+    return _inFlightGuestToken;
   }
 
   static Future<String?> get refresh async => _prefs.getString(_kRefresh);

@@ -31,6 +31,7 @@ class ApiConfig {
   static String get reviewBase => '$apiBase/reviews';
   static String get novelBase => '$apiBase/novel';
   static String get zpicBase => '$apiBase/zpic';
+  static String get javBase => '$apiBase/javtiful';
 
   /// Connection timeout for all HTTP requests
   static const Duration connectTimeout = Duration(seconds: 20);
@@ -514,6 +515,49 @@ class ApiEndpoints {
       '/zpic/detail/${Uri.encodeComponent(videoId)}';
   static const String zpicRandom = '/zpic/random';
   static const String zpicHealth = '/zpic/health';
+
+  // ───── JAVTIFUL (JAV) ENDPOINTS ─────
+  static const String javHome = '/javtiful/home';
+  static String javVideos({int page = 1, String? sort, String? type}) {
+    final params = <String>['page=$page'];
+    if (sort != null && sort.isNotEmpty) params.add('sort=$sort');
+    if (type != null && type.isNotEmpty) params.add('type=$type');
+    return '/javtiful/videos?${params.join('&')}';
+  }
+  static String javSearch(String q, {int page = 1, String? sort}) {
+    final qs = 'q=${Uri.encodeQueryComponent(q)}&page=$page${(sort != null && sort.isNotEmpty) ? '&sort=$sort' : ''}';
+    return '/javtiful/search?$qs';
+  }
+  static String javDetail(String id) => '/javtiful/detail/$id';
+  static const String javCategories = '/javtiful/categories';
+  static const String javActresses = '/javtiful/actresses';
+  static String javActressDetail(String slug, {int page = 1, String? videoType, String? sort, String? q}) {
+    final params = <String>['page=$page'];
+    if (videoType != null && videoType.isNotEmpty) params.add('video_type=${Uri.encodeQueryComponent(videoType)}');
+    if (sort != null && sort.isNotEmpty) params.add('sort=${Uri.encodeQueryComponent(sort)}');
+    if (q != null && q.isNotEmpty) params.add('q=${Uri.encodeQueryComponent(q)}');
+    return '/javtiful/actress/${Uri.encodeComponent(slug)}?${params.join('&')}';
+  }
+  static String javReels({int page = 1}) => '/javtiful/reels?page=$page';
+  static String javStreamProxy(String url) =>
+      '/javtiful/stream-proxy?url=${Uri.encodeQueryComponent(url)}';
+  static String javImageUrl(String rawUrl) {
+    if (rawUrl.isEmpty) return '';
+    if (rawUrl.contains('/api/javtiful/image') || rawUrl.contains('/javtiful/image')) {
+      if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+        return rawUrl;
+      }
+      final clean = rawUrl.startsWith('/api') ? rawUrl.substring(4) : rawUrl;
+      return '${ApiConfig.apiBase}$clean';
+    }
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+      return '${ApiConfig.apiBase}/javtiful/image?url=${Uri.encodeQueryComponent(rawUrl)}';
+    }
+    if (rawUrl.startsWith('/')) {
+      return '${ApiConfig.apiBase}$rawUrl';
+    }
+    return rawUrl;
+  }
 
   // ─── AI SERVICE (VPS MURAH / OPENAI COMPATIBLE) ───
   static const String aiDefaultBaseUrl = 'https://my.vpsmurah.co.id/api/v1';

@@ -505,12 +505,33 @@ class _NovelReaderScreenState extends State<NovelReaderScreen> {
                               final isCurrent = ch.slug == _currentChapterSlug;
                               return ListTile(
                                 dense: true,
+                                leading: Container(
+                                  constraints: const BoxConstraints(minWidth: 42),
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isCurrent
+                                        ? Colors.blueAccent.withValues(alpha: 0.2)
+                                        : (isDarkSheet ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05)),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    ch.chapterBadge,
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: isCurrent ? Colors.blueAccent : (isDarkSheet ? Colors.white70 : Colors.black87),
+                                    ),
+                                  ),
+                                ),
                                 title: Text(
-                                  ch.title,
+                                  ch.cleanSubtitle(widget.novelTitle),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     color: isCurrent ? Colors.blueAccent : sheetFg,
                                     fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                                    fontSize: 14,
+                                    fontSize: 13.5,
                                   ),
                                 ),
                                 subtitle: ch.date.isNotEmpty

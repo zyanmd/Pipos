@@ -10,9 +10,8 @@ import android.os.Bundle
 import android.content.res.Configuration
 import android.app.PictureInPictureParams
 import android.content.pm.ActivityInfo
-import android.hardware.SensorManager
-import android.view.OrientationEventListener
 import android.util.Rational
+import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -20,18 +19,45 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private var autoPipEnabled = false
     private var pipChannel: MethodChannel? = null
-    private var isFullscreenMode = false
-    private var orientationEventListener: OrientationEventListener? = null
+    private var deepLinkChannel: MethodChannel? = null
+    private var initialDeepLink: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.moko.app.security.AntiTamper.verifyIntegrity(this)
         enableHighRefreshRate()
+        initialDeepLink = extractDeepLinkUri(intent)
         // Ensure Auto-PiP is strictly disabled by default
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val builder = PictureInPictureParams.Builder()
             builder.setAutoEnterEnabled(false)
             setPictureInPictureParams(builder.build())
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val uriString = extractDeepLinkUri(intent)
+        if (!uriString.isNullOrEmpty()) {
+            deepLinkChannel?.invokeMethod("onDeepLink", uriString)
+        }
+    }
+
+    private fun extractDeepLinkUri(intent: Intent?): String? {
+        if (intent == null || intent.action != Intent.ACTION_VIEW) return null
+        // Ignore home_widget clicks so HomeWidgetService handles them without duplication
+        if (intent.hasExtra("homeWidget")) return null
+        val data = intent.data ?: return null
+        val scheme = data.scheme?.lowercase() ?: return null
+        if (scheme == "moko") {
+            val host = data.host?.lowercase()
+            if ((host == "anime" || host == "continue") && data.getQueryParameter("url") != null) {
+                return null
+            }
+            return data.toString()
+        }
+        return null
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -69,17 +95,51 @@ class MainActivity : FlutterActivity() {
                     result.success(true)
                 }
                 "enterFullscreen" -> {
-                    startFullscreenOrientationListener()
+                    val isPortrait = call.argument<Boolean>("isPortrait") ?: false
+                    try {
+                        requestedOrientation = if (isPortrait) {
+                            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                        } else {
+                            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                        }
+                    } catch (_: Exception) {}
                     result.success(true)
                 }
                 "exitFullscreen" -> {
-                    stopFullscreenOrientationListener()
+                    try {
+                        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                    } catch (_: Exception) {}
+                    result.success(true)
+                }
+                "setKeepScreenOn" -> {
+                    val enabled = call.argument<Boolean>("enabled") ?: false
+                    try {
+                        runOnUiThread {
+                            if (enabled) {
+                                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                            } else {
+                                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                            }
+                        }
+                    } catch (_: Exception) {}
                     result.success(true)
                 }
                 else -> result.notImplemented()
             }
         }
         pipChannel?.setMethodCallHandler(handler)
+
+        // Setup DeepLink Channel
+        deepLinkChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.moko.app/deeplink")
+        deepLinkChannel?.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getInitialLink" -> {
+                    result.success(initialDeepLink)
+                    initialDeepLink = null
+                }
+                else -> result.notImplemented()
+            }
+        }
 
         // Setup In-App Updater Channel
         val updaterChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.moko.app/updater")
@@ -166,16 +226,7 @@ class MainActivity : FlutterActivity() {
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
         pipChannel?.invokeMethod("onPipChanged", isInPictureInPictureMode)
-        if (isInPictureInPictureMode) {
-            try {
-                orientationEventListener?.disable()
-            } catch (_: Exception) {}
-        } else {
-            if (isFullscreenMode && orientationEventListener?.canDetectOrientation() == true) {
-                try {
-                    orientationEventListener?.enable()
-                } catch (_: Exception) {}
-            }
+        if (!isInPictureInPictureMode) {
             // If exiting PiP mode, immediately disallow auto-enter until video re-enables it
             autoPipEnabled = false
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -186,57 +237,6 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun startFullscreenOrientationListener() {
-        isFullscreenMode = true
-        try {
-            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-        } catch (_: Exception) {}
-
-        if (orientationEventListener == null) {
-            orientationEventListener = object : OrientationEventListener(this, SensorManager.SENSOR_DELAY_NORMAL) {
-                override fun onOrientationChanged(orientation: Int) {
-                    if (!isFullscreenMode || orientation == ORIENTATION_UNKNOWN) return
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && isInPictureInPictureMode) return
-
-                    // 200..290: Standard Landscape (clockwise 270°, top of device on left)
-                    // 70..160: Reverse Landscape (clockwise 90°, top of device on right)
-                    if (orientation in 200..290) {
-                        if (requestedOrientation != ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) {
-                            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                        }
-                    } else if (orientation in 70..160) {
-                        if (requestedOrientation != ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE) {
-                            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
-                        }
-                    }
-                }
-            }
-        }
-
-        if (orientationEventListener?.canDetectOrientation() == true) {
-            try {
-                orientationEventListener?.enable()
-            } catch (_: Exception) {}
-        }
-    }
-
-    private fun stopFullscreenOrientationListener() {
-        isFullscreenMode = false
-        try {
-            orientationEventListener?.disable()
-        } catch (_: Exception) {}
-        try {
-            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        } catch (_: Exception) {}
-    }
-
-    override fun onPause() {
-        super.onPause()
-        try {
-            orientationEventListener?.disable()
-        } catch (_: Exception) {}
-    }
-
     override fun onStart() {
         super.onStart()
         enableHighRefreshRate()
@@ -245,19 +245,6 @@ class MainActivity : FlutterActivity() {
     override fun onResume() {
         super.onResume()
         enableHighRefreshRate()
-        if (isFullscreenMode && orientationEventListener?.canDetectOrientation() == true) {
-            try {
-                orientationEventListener?.enable()
-            } catch (_: Exception) {}
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        try {
-            orientationEventListener?.disable()
-            orientationEventListener = null
-        } catch (_: Exception) {}
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

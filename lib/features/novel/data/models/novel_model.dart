@@ -29,6 +29,12 @@ class NovelItemModel {
   String get effectivePosterUrl => ApiEndpoints.novelImageUrl(poster);
   String get displayTitle => _cleanNovelText(title);
 
+  /// Clean short chapter badge for novel cards / home screen
+  String get cleanLatestChapter {
+    if (latestChapter.isEmpty) return '';
+    return NovelChapterModel.parseChapterBadge(latestChapter, fallback: latestChapter);
+  }
+
   factory NovelItemModel.fromJson(Map<String, dynamic> json) {
     var rawPoster = json['poster']?.toString() ?? json['image']?.toString() ?? '';
     final rawRating = json['rating'];
@@ -124,6 +130,83 @@ class NovelChapterModel {
 
   /// Clean display title without newlines or html entities
   String get displayTitle => _cleanNovelText(title);
+
+  /// Extracted short chapter / episode badge (e.g. "Ch. 175", "Ch. 5.5", "Art", "Extra", "Epi")
+  String get chapterBadge => parseChapterBadge(displayTitle, slug: slug);
+
+  /// Clean chapter subtitle without the repetitive novel title and language suffix
+  String cleanSubtitle([String novelTitle = '']) {
+    var t = displayTitle;
+    t = t.replaceAll(RegExp(r'\(?\s*TAMAT\s*\)?', caseSensitive: false), '');
+    t = t.replaceAll(RegExp(r'\bBahasa\s+Indonesia\b', caseSensitive: false), '');
+    if (novelTitle.isNotEmpty) {
+      final pattern = RegExp('^${RegExp.escape(novelTitle.trim())}[\\s–—:\\-]*', caseSensitive: false);
+      t = t.replaceFirst(pattern, '');
+    }
+    t = t.replaceAll(RegExp(r'\s+'), ' ').trim();
+    // Trim leading/trailing separators
+    t = t.replaceAll(RegExp(r'^[\s–—:\-]+|[\s–—:\-]+$'), '').trim();
+    return t.isNotEmpty ? t : displayTitle;
+  }
+
+  /// Universal parser to extract chapter / episode number or special label from any chapter title
+  static String parseChapterBadge(String raw, {String slug = '', String fallback = 'Ch'}) {
+    final t = raw.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+    // Check special non-numbered chapters
+    if (RegExp(r'\b(?:illustrations?|ilustrasi)\b', caseSensitive: false).hasMatch(t)) {
+      return 'Art';
+    }
+    if (RegExp(r'\bafterword\b', caseSensitive: false).hasMatch(t)) {
+      return 'After';
+    }
+    if (RegExp(r'\bepilogue\b', caseSensitive: false).hasMatch(t)) {
+      return 'Epi';
+    }
+    if (RegExp(r'\bprologue\b', caseSensitive: false).hasMatch(t)) {
+      return 'Pro';
+    }
+    if (RegExp(r'\bextra\b', caseSensitive: false).hasMatch(t)) {
+      return 'Extra';
+    }
+    if (RegExp(r'\bside\s*story\b', caseSensitive: false).hasMatch(t)) {
+      return 'Side';
+    }
+
+    // Standard Chapter / Ch. / Bab / Episode patterns
+    final mChapter = RegExp(r'(?:chapter|ch\.|ep\.|episode|bab)\s*([0-9]+(?:\.[0-9]+)?)', caseSensitive: false).firstMatch(t);
+    if (mChapter != null && mChapter.group(1) != null) {
+      return 'Ch. ${mChapter.group(1)}';
+    }
+
+    // v2c5 or c175 pattern
+    final mVC = RegExp(r'v[0-9]+c([0-9]+(?:\.[0-9]+)?)', caseSensitive: false).firstMatch(t);
+    if (mVC != null && mVC.group(1) != null) {
+      return 'Ch. ${mVC.group(1)}';
+    }
+
+    // Volume standalone: Vol. 2
+    final mVol = RegExp(r'(?:volume|vol\.)\s*([0-9]+)', caseSensitive: false).firstMatch(t);
+    if (mVol != null && mVol.group(1) != null) {
+      return 'Vol. ${mVol.group(1)}';
+    }
+
+    // Fallback: slug inspection (e.g. "...-chapter-175-...")
+    if (slug.isNotEmpty) {
+      final mSlug = RegExp(r'(?:chapter|ch|ep|episode|bab)-([0-9]+(?:-[0-9]+)?)', caseSensitive: false).firstMatch(slug);
+      if (mSlug != null && mSlug.group(1) != null) {
+        return 'Ch. ${mSlug.group(1)!.replaceAll('-', '.')}';
+      }
+    }
+
+    // Standalone number in title
+    final mNum = RegExp(r'\b([0-9]+(?:\.[0-9]+)?)\b').firstMatch(t);
+    if (mNum != null && mNum.group(1) != null) {
+      return 'Ch. ${mNum.group(1)}';
+    }
+
+    return fallback;
+  }
 
   factory NovelChapterModel.fromJson(Map<String, dynamic> json) {
     final rawTitle = json['title']?.toString() ?? '';

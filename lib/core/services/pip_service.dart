@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 /// Service terpusat untuk mengontrol Picture-in-Picture (PiP) dan Fullscreen khusus pemutar video.
 /// Mendukung Android (Native OS PiP) dan Windows (Floating Always-on-Top PiP).
@@ -86,14 +87,35 @@ class PipService {
   }
 
   /// Memperbarui state pemutaran video secara presisi.
-  /// Auto-PiP HANYA aktif jika:
+  /// Auto-PiP & Keep-Screen-On HANYA aktif jika:
   /// 1. Sedang berada di layar video ([isVideoScreen] == true)
   /// 2. Video benar-benar sedang diputar ([isPlaying] == true)
   void updateVideoPlaybackState({required bool isVideoScreen, required bool isPlaying}) {
     _isVideoScreenActive = isVideoScreen;
     _isVideoPlaying = isPlaying;
-    final bool shouldEnable = isVideoScreen && isPlaying;
-    setAutoPip(shouldEnable);
+    final bool shouldEnablePip = isVideoScreen && isPlaying;
+    setAutoPip(shouldEnablePip);
+    // Jaga layar tetap menyala selama berada di layar video (termasuk saat buffering atau sedang fullscreen)
+    _setKeepScreenOn(isVideoScreen);
+  }
+
+  /// Menjaga layar tetap menyala saat menonton video (mencegah layar tidur/mati sendiri)
+  Future<void> _setKeepScreenOn(bool enabled) async {
+    try {
+      if (enabled) {
+        await WakelockPlus.enable();
+      } else {
+        await WakelockPlus.disable();
+      }
+    } catch (_) {}
+
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        await _channel.invokeMethod('setKeepScreenOn', {'enabled': enabled});
+      } catch (e) {
+        debugPrint('[PipService] setKeepScreenOn error: $e');
+      }
+    }
   }
 
   /// Memaksa matikan PiP seketika (dipanggil saat buka komik, navigasi keluar video, dll.)
@@ -109,10 +131,12 @@ class PipService {
     isInPip.value = false;
     isFullscreen.value = false;
     setAutoPip(false);
+    _setKeepScreenOn(false);
   }
 
   /// Masuk mode fullscreen (True OS Fullscreen di Windows, Immersive di Mobile)
-  Future<bool> enterFullscreen() async {
+  /// Jika [isPortrait] == true, layar tidak akan diputar ke landscape melainkan tetap portrait
+  Future<bool> enterFullscreen({bool isPortrait = false}) async {
     isFullscreen.value = true;
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
       try {
@@ -128,12 +152,20 @@ class PipService {
         if (!kIsWeb &&
             (defaultTargetPlatform == TargetPlatform.android ||
              defaultTargetPlatform == TargetPlatform.iOS)) {
-          await SystemChrome.setPreferredOrientations([
-            DeviceOrientation.landscapeLeft,
-            DeviceOrientation.landscapeRight,
-          ]);
+          if (isPortrait) {
+            await SystemChrome.setPreferredOrientations([
+              DeviceOrientation.portraitUp,
+            ]);
+          } else {
+            // Gunakan sensorLandscape (landscapeLeft + landscapeRight) di level Flutter
+            // sambil tetap menonaktifkan OrientationEventListener native yang memicu tombol rotasi
+            await SystemChrome.setPreferredOrientations([
+              DeviceOrientation.landscapeLeft,
+              DeviceOrientation.landscapeRight,
+            ]);
+          }
           try {
-            await _channel.invokeMethod<bool>('enterFullscreen');
+            await _channel.invokeMethod<bool>('enterFullscreen', {'isPortrait': isPortrait});
           } catch (e) {
             debugPrint('[PipService] enterFullscreen native error: $e');
           }

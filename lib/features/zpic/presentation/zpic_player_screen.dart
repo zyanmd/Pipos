@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/services/deep_link_service.dart';
 import '../../../core/services/pip_service.dart';
 import '../../../shared/widgets/cinematic_fullscreen_hud.dart';
 import '../../anime/presentation/widgets/anime_player_custom_controls.dart';
@@ -60,7 +61,7 @@ class _ZpicPlayerScreenState extends State<ZpicPlayerScreen>
 
   @override
   void didPushNext() {
-    _onPausePlayer();
+    // Tidak perlu mem-pause video hanya karena modal/sheet dibuka di atas player
   }
 
   @override
@@ -72,9 +73,25 @@ class _ZpicPlayerScreenState extends State<ZpicPlayerScreen>
     }
   }
 
+  bool get _isPortraitVideo {
+    final c = _videoPlayerController;
+    if (c == null || !c.value.isInitialized) return false;
+    final size = c.value.size;
+    return (size.height > size.width) || (c.value.aspectRatio > 0 && c.value.aspectRatio < 0.95);
+  }
+
+  void _syncPipState() {
+    final isPlaying = _videoPlayerController?.value.isPlaying ?? false;
+    PipService.instance.updateVideoPlaybackState(
+      isVideoScreen: true,
+      isPlaying: isPlaying,
+    );
+  }
+
   void _onPausePlayer() {
     try {
       _videoPlayerController?.pause();
+      _syncPipState();
     } catch (_) {}
   }
 
@@ -94,7 +111,7 @@ class _ZpicPlayerScreenState extends State<ZpicPlayerScreen>
 
   Future<void> _enterFullscreen() async {
     setState(() => _isFullscreen = true);
-    await PipService.instance.enterFullscreen();
+    await PipService.instance.enterFullscreen(isPortrait: _isPortraitVideo);
   }
 
   Future<void> _exitFullscreen() async {
@@ -208,12 +225,23 @@ class _ZpicPlayerScreenState extends State<ZpicPlayerScreen>
 
       await controller.play();
 
-      if (mounted) {
-        setState(() {
-          _videoPlayerController = controller;
-          _playerInitializing = false;
-        });
+      if (!mounted) {
+        controller.dispose();
+        return;
       }
+
+      controller.addListener(() {
+        if (mounted) {
+          _syncPipState();
+          setState(() {});
+        }
+      });
+      _syncPipState();
+
+      setState(() {
+        _videoPlayerController = controller;
+        _playerInitializing = false;
+      });
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -275,6 +303,24 @@ class _ZpicPlayerScreenState extends State<ZpicPlayerScreen>
     );
   }
 
+  void _shareVideo() {
+    HapticFeedback.selectionClick();
+    final link = DeepLinkService.buildZpicLink(
+      videoId: _currentVideo.videoId,
+      title: _currentVideo.title,
+      url: _currentVideo.url,
+    );
+    final text = 'Tonton ${_currentVideo.title} di MOKO!\n$link';
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Tautan video disalin untuk dibagikan!'),
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
   Widget _buildIosActionButton({
     required IconData icon,
     required VoidCallback onTap,
@@ -313,85 +359,106 @@ class _ZpicPlayerScreenState extends State<ZpicPlayerScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? AppColors.darkBackground : AppColors.lightBackground;
-    final cardBg = isDark ? AppColors.darkCard : AppColors.lightCard;
-    final textPrimary = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
-    final textMuted = isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;
-
-    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
-    final isFullscreenActive = isLandscape || _isFullscreen;
-
-    if (isFullscreenActive) {
-      return CallbackShortcuts(
-        bindings: {
-          const SingleActivator(LogicalKeyboardKey.escape): () {
-            if (_isFullscreen) _exitFullscreen();
-          },
-          const SingleActivator(LogicalKeyboardKey.keyF): () {
-            _toggleFullScreen();
-          },
-        },
-        child: Focus(
-          autofocus: true,
-          child: Scaffold(
+    return ValueListenableBuilder<bool>(
+      valueListenable: PipService.instance.isInPip,
+      builder: (context, inPip, child) {
+        if (inPip) {
+          return Scaffold(
             backgroundColor: Colors.black,
-            body: PopScope(
-              canPop: false,
-              onPopInvokedWithResult: (didPop, result) async {
-                if (didPop) return;
-                await _exitFullscreen();
+            body: Center(
+              child: _videoPlayerController != null && _videoPlayerController!.value.isInitialized
+                  ? AspectRatio(
+                      aspectRatio: _videoPlayerController!.value.aspectRatio > 0
+                          ? _videoPlayerController!.value.aspectRatio
+                          : 16 / 9,
+                      child: VideoPlayer(_videoPlayerController!),
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          );
+        }
+
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final bg = isDark ? AppColors.darkBackground : AppColors.lightBackground;
+        final cardBg = isDark ? AppColors.darkCard : AppColors.lightCard;
+        final textPrimary = isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary;
+        final textMuted = isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted;
+
+        final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+        final isFullscreenActive = isLandscape || _isFullscreen;
+
+        if (isFullscreenActive) {
+          return CallbackShortcuts(
+            bindings: {
+              const SingleActivator(LogicalKeyboardKey.escape): () {
+                if (_isFullscreen) _exitFullscreen();
               },
-              child: _buildPlayerContent(isDark),
+              const SingleActivator(LogicalKeyboardKey.keyF): () {
+                _toggleFullScreen();
+              },
+            },
+            child: Focus(
+              autofocus: true,
+              child: Scaffold(
+                backgroundColor: Colors.black,
+                body: PopScope(
+                  canPop: false,
+                  onPopInvokedWithResult: (didPop, result) async {
+                    if (didPop) return;
+                    await _exitFullscreen();
+                  },
+                  child: _buildPlayerContent(isDark),
+                ),
+              ),
             ),
-          ),
-        ),
-      );
-    }
+          );
+        }
 
-    return Scaffold(
-      backgroundColor: bg,
-      appBar: AppBar(
-        title: Text(
-          _currentVideo.title.isNotEmpty ? _currentVideo.title : 'zPic Video Player',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: textPrimary,
-          ),
-        ),
-        backgroundColor: bg,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 8),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: _buildIosActionButton(
-              icon: CupertinoIcons.back,
-              onTap: () => Navigator.of(context).pop(),
-              tooltip: 'Kembali',
-              isDark: isDark,
+        return Scaffold(
+          backgroundColor: bg,
+          appBar: AppBar(
+            title: Text(
+              _currentVideo.title.isNotEmpty ? _currentVideo.title : 'zPic Video Player',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: textPrimary,
+              ),
+            ),
+            backgroundColor: bg,
+            elevation: 0,
+            surfaceTintColor: Colors.transparent,
+            leading: Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: _buildIosActionButton(
+                  icon: CupertinoIcons.back,
+                  onTap: () => Navigator.of(context).pop(),
+                  tooltip: 'Kembali',
+                  isDark: isDark,
+                ),
+              ),
             ),
           ),
-        ),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Video Player Container (Fixed 16:9 Aspect Ratio)
-            AspectRatio(
-              aspectRatio: 16 / 9,
-              child: _buildPlayerContent(isDark),
-            ),
+          body: SafeArea(
+            child: Column(
+              children: [
+                // Video Player Container (Dynamic Aspect Ratio for Portrait/Landscape)
+                AspectRatio(
+                  aspectRatio: _isPortraitVideo
+                      ? (_videoPlayerController?.value.aspectRatio ?? 9 / 16).clamp(0.5, 0.95)
+                      : 16 / 9,
+                  child: _buildPlayerContent(isDark),
+                ),
 
-            // Video Details & Controls
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
+                // Video Details & Controls
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
                   // Title & Meta
                   Text(
                     _currentVideo.title.isNotEmpty ? _currentVideo.title : 'Untitled Video',
@@ -486,6 +553,12 @@ class _ZpicPlayerScreenState extends State<ZpicPlayerScreen>
                           label: 'Salin Judul',
                           isDark: isDark,
                           onTap: _copyTitle,
+                        ),
+                        _buildActionButton(
+                          icon: CupertinoIcons.share,
+                          label: 'Bagikan',
+                          isDark: isDark,
+                          onTap: _shareVideo,
                         ),
                         _buildActionButton(
                           icon: CupertinoIcons.arrow_clockwise,
@@ -614,6 +687,8 @@ class _ZpicPlayerScreenState extends State<ZpicPlayerScreen>
           ],
         ),
       ),
+    );
+      },
     );
   }
 

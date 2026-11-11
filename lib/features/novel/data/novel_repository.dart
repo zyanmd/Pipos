@@ -276,31 +276,31 @@ class NovelRepository {
     }
 
     _cachedGenres = const [
-      NovelGenreModel(name: 'Romance', slug: 'romance', count: 262),
-      NovelGenreModel(name: 'Fantasy', slug: 'fantasy', count: 221),
-      NovelGenreModel(name: 'Comedy', slug: 'comedy', count: 212),
-      NovelGenreModel(name: 'Harem', slug: 'harem', count: 196),
-      NovelGenreModel(name: 'Action', slug: 'action', count: 193),
-      NovelGenreModel(name: 'Adventure', slug: 'adventure', count: 167),
-      NovelGenreModel(name: 'School Life', slug: 'school-life', count: 146),
-      NovelGenreModel(name: 'Drama', slug: 'drama', count: 108),
-      NovelGenreModel(name: 'Slice of Life', slug: 'slice-of-life', count: 103),
-      NovelGenreModel(name: 'Shounen', slug: 'shounen', count: 73),
-      NovelGenreModel(name: 'Supernatural', slug: 'supernatural', count: 53),
-      NovelGenreModel(name: 'Ecchi', slug: 'ecchi', count: 46),
-      NovelGenreModel(name: 'Martial Arts', slug: 'martial-arts', count: 44),
-      NovelGenreModel(name: 'Seinen', slug: 'seinen', count: 41),
+      NovelGenreModel(name: 'Romance', slug: 'romance', count: 264),
+      NovelGenreModel(name: 'Fantasy', slug: 'fantasy', count: 225),
+      NovelGenreModel(name: 'Comedy', slug: 'comedy', count: 214),
+      NovelGenreModel(name: 'Action', slug: 'action', count: 199),
+      NovelGenreModel(name: 'Harem', slug: 'harem', count: 197),
+      NovelGenreModel(name: 'Adventure', slug: 'adventure', count: 171),
+      NovelGenreModel(name: 'School Life', slug: 'school-life', count: 147),
+      NovelGenreModel(name: 'Drama', slug: 'drama', count: 110),
+      NovelGenreModel(name: 'Slice of Life', slug: 'slice-of-life', count: 104),
+      NovelGenreModel(name: 'Shounen', slug: 'shounen', count: 74),
+      NovelGenreModel(name: 'Supernatural', slug: 'supernatural', count: 54),
+      NovelGenreModel(name: 'Ecchi', slug: 'ecchi', count: 47),
+      NovelGenreModel(name: 'Martial Arts', slug: 'martial-arts', count: 45),
+      NovelGenreModel(name: 'Seinen', slug: 'seinen', count: 42),
       NovelGenreModel(name: 'Mature', slug: 'mature', count: 36),
-      NovelGenreModel(name: 'Psychological', slug: 'psychological', count: 31),
+      NovelGenreModel(name: 'Psychological', slug: 'psychological', count: 32),
       NovelGenreModel(name: 'Adult', slug: 'adult', count: 30),
-      NovelGenreModel(name: 'Mystery', slug: 'mystery', count: 29),
-      NovelGenreModel(name: 'Xianxia', slug: 'xianxia', count: 25),
+      NovelGenreModel(name: 'Mystery', slug: 'mystery', count: 30),
+      NovelGenreModel(name: 'Xianxia', slug: 'xianxia', count: 27),
       NovelGenreModel(name: 'Xuanhuan', slug: 'xuanhuan', count: 19),
       NovelGenreModel(name: 'Tragedy', slug: 'tragedy', count: 18),
       NovelGenreModel(name: 'Sci-fi', slug: 'sci-fi', count: 13),
-      NovelGenreModel(name: 'Wuxia', slug: 'wuxia', count: 9),
-      NovelGenreModel(name: 'Gender Bender', slug: 'gender-bender', count: 4),
-      NovelGenreModel(name: 'Horror', slug: 'horror', count: 4),
+      NovelGenreModel(name: 'Wuxia', slug: 'wuxia', count: 10),
+      NovelGenreModel(name: 'Gender Bender', slug: 'gender-bender', count: 6),
+      NovelGenreModel(name: 'Horror', slug: 'horror', count: 5),
       NovelGenreModel(name: 'Shoujo', slug: 'shoujo', count: 3),
       NovelGenreModel(name: 'Mecha', slug: 'mecha', count: 3),
       NovelGenreModel(name: 'Smut', slug: 'smut', count: 2),
@@ -310,6 +310,7 @@ class NovelRepository {
       NovelGenreModel(name: 'Historical', slug: 'historical', count: 1),
       NovelGenreModel(name: 'Heroes', slug: 'heroes', count: 1),
       NovelGenreModel(name: 'Protagonist Strong from the Start', slug: 'protagonist-strong-from-the-start', count: 1),
+      NovelGenreModel(name: 'Yuri', slug: 'yuri', count: 1),
     ];
     return _cachedGenres!;
   }
@@ -327,6 +328,47 @@ class NovelRepository {
     } catch (e) {
       debugPrint('[NovelRepository] getNovelsByGenre error: $e');
       return [];
+    }
+  }
+
+  /// Get novels filtered by genre with pagination details
+  Future<NovelPaginationData<NovelItemModel>> getNovelsByGenrePaginated(
+    String genreSlug, {
+    int page = 1,
+  }) async {
+    try {
+      final resp = await ApiClient.instance.get(
+        ApiEndpoints.novelByGenre(genreSlug.trim(), page: page),
+      );
+      final rawData = resp.data;
+      final list = _asList(rawData);
+      final items = list
+          .map((e) => NovelItemModel.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+
+      bool hasNext = items.length >= 10;
+      if (rawData is Map) {
+        final d = rawData['data'];
+        if (d is Map && d.containsKey('pagination') && d['pagination'] is Map) {
+          final p = d['pagination'] as Map;
+          if (p.containsKey('hasNext')) {
+            hasNext = p['hasNext'] == true;
+          }
+        }
+      }
+
+      return NovelPaginationData<NovelItemModel>(
+        items: items,
+        currentPage: page,
+        hasNext: hasNext,
+      );
+    } catch (e) {
+      debugPrint('[NovelRepository] getNovelsByGenrePaginated error: $e');
+      return NovelPaginationData<NovelItemModel>(
+        items: [],
+        currentPage: page,
+        hasNext: false,
+      );
     }
   }
 

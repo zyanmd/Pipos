@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../../core/services/pip_service.dart';
 import '../../../shared/widgets/app_network_image.dart';
 import '../../anime/data/models/anime_model.dart';
@@ -46,6 +47,7 @@ class _AnimeReelsScreenState extends State<AnimeReelsScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    WakelockPlus.enable().catchError((_) {});
     PipService.instance.pauseAllPlayers();
     PipService.instance.disablePipNow();
 
@@ -103,6 +105,7 @@ class _AnimeReelsScreenState extends State<AnimeReelsScreen>
 
   @override
   void dispose() {
+    WakelockPlus.disable().catchError((_) {});
     WidgetsBinding.instance.removeObserver(this);
     try {
       PipService.routeObserver.unsubscribe(this);

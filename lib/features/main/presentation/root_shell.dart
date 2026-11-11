@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/services/deep_link_service.dart';
 import '../../../core/services/pip_service.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../shared/widgets/desktop_sidebar.dart';
@@ -30,10 +31,12 @@ class _RootShellState extends State<RootShell> {
   final _profileKey = GlobalKey<NavigatorState>(debugLabel: 'profile_nav');
 
   late final List<_TabSpec> _tabs;
+  late final PageController _pageController;
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: _currentIndex);
     _tabs = [
       _TabSpec(
         navigatorKey: _animeKey,
@@ -55,6 +58,15 @@ class _RootShellState extends State<RootShell> {
 
     // Background update check on startup
     AppUpdateService.instance.checkAndShowUpdate(context, isManual: false);
+
+    // Flush any queued incoming deep link once RootShell is mounted
+    DeepLinkService.instance.markAppReady();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   void _onTab(int index) {
@@ -70,16 +82,36 @@ class _RootShellState extends State<RootShell> {
         _currentIndex = index;
         _loadedTabs.add(index);
       });
+      if (_pageController.hasClients) {
+        _pageController.animateToPage(
+          index,
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOutCubic,
+        );
+      }
+      _checkNavState();
+    }
+  }
+
+  void _onPageChanged(int index) {
+    if (_currentIndex != index) {
+      PipService.instance.pauseAllPlayers();
+      PipService.instance.disablePipNow();
+      setState(() {
+        _currentIndex = index;
+        _loadedTabs.add(index);
+      });
       _checkNavState();
     }
   }
 
   void _checkNavState() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final nav = _tabs[_currentIndex].navigatorKey.currentState;
       final canPop = nav?.canPop() ?? false;
       final atRoot = !canPop;
-      if (atRoot != _isAtRoot && mounted) {
+      if (atRoot != _isAtRoot) {
         setState(() => _isAtRoot = atRoot);
       }
     });
@@ -100,10 +132,7 @@ class _RootShellState extends State<RootShell> {
         }
         // Otherwise switch to tab 0
         if (_currentIndex != 0) {
-          PipService.instance.pauseAllPlayers();
-          PipService.instance.disablePipNow();
-          setState(() => _currentIndex = 0);
-          _checkNavState();
+          _onTab(0);
         }
       },
       child: LayoutBuilder(
@@ -177,37 +206,55 @@ class _RootShellState extends State<RootShell> {
   }
 
   Widget _buildPagesStack() {
-    return Stack(
-      fit: StackFit.expand,
-      children: List.generate(_tabs.length, (i) {
-        if (!_loadedTabs.contains(i)) {
-          return const SizedBox.shrink();
-        }
+    return PageView.builder(
+      controller: _pageController,
+      itemCount: _tabs.length,
+      physics: _isAtRoot
+          ? const BouncingScrollPhysics()
+          : const NeverScrollableScrollPhysics(),
+      onPageChanged: _onPageChanged,
+      itemBuilder: (context, i) {
         final tab = _tabs[i];
-        return Offstage(
-          offstage: i != _currentIndex,
-          child: TickerMode(
-            enabled: i == _currentIndex,
-            child: NotificationListener<NavigationNotification>(
-              onNotification: (_) {
-                _checkNavState();
-                return false;
-              },
-              child: Navigator(
-                key: tab.navigatorKey,
-                observers: [
-                  _TabNavObserver(onChanged: _checkNavState),
-                ],
-                onGenerateRoute: (settings) => MaterialPageRoute(
-                  settings: settings,
-                  builder: tab.builder,
-                ),
+        return _KeepAliveTab(
+          child: NotificationListener<NavigationNotification>(
+            onNotification: (_) {
+              _checkNavState();
+              return false;
+            },
+            child: Navigator(
+              key: tab.navigatorKey,
+              observers: [
+                _TabNavObserver(onChanged: _checkNavState),
+              ],
+              onGenerateRoute: (settings) => MaterialPageRoute(
+                settings: settings,
+                builder: tab.builder,
               ),
             ),
           ),
         );
-      }),
+      },
     );
+  }
+}
+
+class _KeepAliveTab extends StatefulWidget {
+  final Widget child;
+  const _KeepAliveTab({required this.child});
+
+  @override
+  State<_KeepAliveTab> createState() => _KeepAliveTabState();
+}
+
+class _KeepAliveTabState extends State<_KeepAliveTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
 }
 

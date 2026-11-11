@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/config/api_config.dart';
 import '../../../core/services/comic_read_progress_service.dart';
+import '../../../core/services/deep_link_service.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../shared/providers/auth_provider.dart';
 import '../../../shared/widgets/common_widgets.dart';
@@ -347,7 +348,11 @@ class _ComicDetailScreenState extends State<ComicDetailScreen> {
 
   void _shareComic(ComicDetailModel d) {
     HapticFeedback.selectionClick();
-    final text = '${d.title} - Baca komik di Moko!';
+    final link = DeepLinkService.buildComicLink(
+      slug: d.slug.isNotEmpty ? d.slug : widget.slug,
+      title: d.title,
+    );
+    final text = 'Baca ${d.title} di MOKO!\n$link';
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -357,7 +362,7 @@ class _ComicDetailScreenState extends State<ComicDetailScreen> {
           children: [
             Icon(CupertinoIcons.checkmark_alt_circle_fill, color: Colors.white, size: 20),
             SizedBox(width: 10),
-            Text('Teks komik berhasil disalin untuk dibagikan!'),
+            Expanded(child: Text('Tautan komik berhasil disalin untuk dibagikan!')),
           ],
         ),
       ),

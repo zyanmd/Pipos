@@ -14,6 +14,9 @@ import '../data/novel_repository.dart';
 import 'novel_daftar_screen.dart';
 import 'novel_detail_screen.dart';
 import 'novel_search_screen.dart';
+import 'novel_genre_detail_screen.dart';
+import 'novel_genre_list_screen.dart';
+import '../../../shared/widgets/bouncy_tap.dart';
 
 class NovelHomeScreen extends StatefulWidget {
   const NovelHomeScreen({super.key});
@@ -141,6 +144,24 @@ class _NovelHomeScreenState extends State<NovelHomeScreen> {
     Navigator.of(context).push(
       CupertinoPageRoute(
         builder: (_) => NovelSearchScreen(initialGenre: genre),
+      ),
+    );
+  }
+
+  void _openGenreDetail(NovelGenreModel genre) {
+    HapticFeedback.lightImpact();
+    Navigator.of(context).push(
+      CupertinoPageRoute(
+        builder: (_) => NovelGenreDetailScreen(genre: genre),
+      ),
+    );
+  }
+
+  void _openGenreList() {
+    HapticFeedback.lightImpact();
+    Navigator.of(context).push(
+      CupertinoPageRoute(
+        builder: (_) => const NovelGenreListScreen(),
       ),
     );
   }
@@ -593,8 +614,8 @@ class _NovelHomeScreenState extends State<NovelHomeScreen> {
                               score: item.rating > 0
                                   ? item.rating.toStringAsFixed(1)
                                   : null,
-                              badge: item.latestChapter.isNotEmpty
-                                  ? item.latestChapter
+                              badge: item.cleanLatestChapter.isNotEmpty
+                                  ? item.cleanLatestChapter
                                   : (item.status.isNotEmpty ? item.status : null),
                               onTap: () => _openDetail(item),
                             );
@@ -631,46 +652,55 @@ class _NovelHomeScreenState extends State<NovelHomeScreen> {
   }
 
   Widget _buildGenreSection(bool isDark) {
-    const List<Map<String, String>> defaultGenres = [
-      {'name': 'Romance', 'slug': 'romance'},
-      {'name': 'Fantasy', 'slug': 'fantasy'},
-      {'name': 'Comedy', 'slug': 'comedy'},
-      {'name': 'Harem', 'slug': 'harem'},
-      {'name': 'Action', 'slug': 'action'},
-      {'name': 'Adventure', 'slug': 'adventure'},
-      {'name': 'School Life', 'slug': 'school-life'},
-      {'name': 'Drama', 'slug': 'drama'},
-      {'name': 'Slice of Life', 'slug': 'slice-of-life'},
-      {'name': 'Shounen', 'slug': 'shounen'},
-      {'name': 'Supernatural', 'slug': 'supernatural'},
-      {'name': 'Ecchi', 'slug': 'ecchi'},
-      {'name': 'Seinen', 'slug': 'seinen'},
-      {'name': 'Mature', 'slug': 'mature'},
-      {'name': 'Martial Arts', 'slug': 'martial-arts'},
-      {'name': 'Psychological', 'slug': 'psychological'},
-      {'name': 'Adult', 'slug': 'adult'},
-      {'name': 'Mystery', 'slug': 'mystery'},
-      {'name': 'Xianxia', 'slug': 'xianxia'},
-      {'name': 'Xuanhuan', 'slug': 'xuanhuan'},
-      {'name': 'Tragedy', 'slug': 'tragedy'},
-      {'name': 'Sci-fi', 'slug': 'sci-fi'},
-      {'name': 'Wuxia', 'slug': 'wuxia'},
-      {'name': 'Gender Bender', 'slug': 'gender-bender'},
-      {'name': 'Horror', 'slug': 'horror'},
-      {'name': 'Shoujo', 'slug': 'shoujo'},
-      {'name': 'Mecha', 'slug': 'mecha'},
-      {'name': 'Smut', 'slug': 'smut'},
-      {'name': 'Josei', 'slug': 'josei'},
-      {'name': 'Transmigration', 'slug': 'transmigration'},
-      {'name': 'Male Protagonist', 'slug': 'male-protagonist'},
-      {'name': 'Historical', 'slug': 'historical'},
-      {'name': 'Heroes', 'slug': 'heroes'},
-      {'name': 'Protagonist Strong from the Start', 'slug': 'protagonist-strong-from-the-start'},
+    const List<Map<String, dynamic>> defaultGenres = [
+      {'name': 'Action', 'slug': 'action', 'count': 199},
+      {'name': 'Romance', 'slug': 'romance', 'count': 264},
+      {'name': 'Fantasy', 'slug': 'fantasy', 'count': 225},
+      {'name': 'Comedy', 'slug': 'comedy', 'count': 214},
+      {'name': 'Harem', 'slug': 'harem', 'count': 197},
+      {'name': 'Adventure', 'slug': 'adventure', 'count': 171},
+      {'name': 'School Life', 'slug': 'school-life', 'count': 147},
+      {'name': 'Drama', 'slug': 'drama', 'count': 110},
+      {'name': 'Slice of Life', 'slug': 'slice-of-life', 'count': 104},
+      {'name': 'Shounen', 'slug': 'shounen', 'count': 74},
+      {'name': 'Supernatural', 'slug': 'supernatural', 'count': 54},
+      {'name': 'Ecchi', 'slug': 'ecchi', 'count': 47},
+      {'name': 'Martial Arts', 'slug': 'martial-arts', 'count': 45},
+      {'name': 'Seinen', 'slug': 'seinen', 'count': 42},
+      {'name': 'Mature', 'slug': 'mature', 'count': 36},
+      {'name': 'Psychological', 'slug': 'psychological', 'count': 32},
+      {'name': 'Adult', 'slug': 'adult', 'count': 30},
+      {'name': 'Mystery', 'slug': 'mystery', 'count': 30},
+      {'name': 'Xianxia', 'slug': 'xianxia', 'count': 27},
+      {'name': 'Xuanhuan', 'slug': 'xuanhuan', 'count': 19},
+      {'name': 'Tragedy', 'slug': 'tragedy', 'count': 18},
+      {'name': 'Sci-fi', 'slug': 'sci-fi', 'count': 13},
+      {'name': 'Wuxia', 'slug': 'wuxia', 'count': 10},
+      {'name': 'Gender Bender', 'slug': 'gender-bender', 'count': 6},
+      {'name': 'Horror', 'slug': 'horror', 'count': 5},
+      {'name': 'Shoujo', 'slug': 'shoujo', 'count': 3},
+      {'name': 'Mecha', 'slug': 'mecha', 'count': 3},
+      {'name': 'Smut', 'slug': 'smut', 'count': 2},
+      {'name': 'Josei', 'slug': 'josei', 'count': 2},
+      {'name': 'Transmigration', 'slug': 'transmigration', 'count': 1},
+      {'name': 'Male Protagonist', 'slug': 'male-protagonist', 'count': 1},
+      {'name': 'Historical', 'slug': 'historical', 'count': 1},
+      {'name': 'Heroes', 'slug': 'heroes', 'count': 1},
+      {'name': 'Protagonist Strong from the Start', 'slug': 'protagonist-strong-from-the-start', 'count': 1},
+      {'name': 'Yuri', 'slug': 'yuri', 'count': 1},
     ];
 
-    final genresToDisplay = _genres.isNotEmpty
-        ? _genres.map((g) => {'name': g.name, 'slug': g.slug}).toList()
-        : defaultGenres;
+    final List<NovelGenreModel> genresToDisplay = _genres.isNotEmpty
+        ? _genres
+        : defaultGenres
+            .map(
+              (g) => NovelGenreModel(
+                name: g['name'] as String,
+                slug: g['slug'] as String,
+                count: g['count'] as int,
+              ),
+            )
+            .toList();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
@@ -691,16 +721,16 @@ class _NovelHomeScreenState extends State<NovelHomeScreen> {
                       : AppColors.iosTextPrimaryLight,
                 ),
               ),
-              GestureDetector(
-                onTap: () => _openSearch(),
+              BouncyTap(
+                onTap: _openGenreList,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Cari Genre',
+                      'Lihat Semua',
                       style: TextStyle(
                         fontSize: 13.5,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                         color: isDark ? Colors.white70 : Colors.black87,
                         letterSpacing: -0.2,
                       ),
@@ -718,39 +748,66 @@ class _NovelHomeScreenState extends State<NovelHomeScreen> {
           ),
           const SizedBox(height: 12),
           SizedBox(
-            height: 36,
+            height: 38,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
               itemCount: genresToDisplay.length,
               separatorBuilder: (_, __) => const SizedBox(width: 8),
               itemBuilder: (context, i) {
                 final g = genresToDisplay[i];
-                return GestureDetector(
-                  onTap: () => _openSearch(g['slug']),
+                return BouncyTap(
+                  onTap: () => _openGenreDetail(g),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? Colors.white.withValues(alpha: 0.08)
-                          : Colors.black.withValues(alpha: 0.05),
-                      borderRadius: BorderRadius.circular(10),
+                          ? const Color(0xFF1E1E22)
+                          : const Color(0xFFEBEBF0),
+                      borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: isDark
-                            ? AppColors.iosHairlineDark
-                            : AppColors.iosHairlineLight,
-                        width: 0.5,
+                            ? Colors.white.withValues(alpha: 0.12)
+                            : Colors.black.withValues(alpha: 0.08),
+                        width: 0.8,
                       ),
                     ),
                     alignment: Alignment.center,
-                    child: Text(
-                      g['name']!,
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w500,
-                        color: isDark
-                            ? AppColors.iosTextPrimaryDark
-                            : AppColors.iosTextPrimaryLight,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          g.name,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.2,
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF1D1D1F),
+                          ),
+                        ),
+                        if (g.count > 0) ...[
+                          const SizedBox(width: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.14)
+                                  : Colors.black.withValues(alpha: 0.07),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${g.count}',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? Colors.white70 : Colors.black54,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 );

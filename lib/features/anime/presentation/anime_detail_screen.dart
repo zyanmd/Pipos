@@ -7,6 +7,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/config/api_config.dart';
 import '../../../core/services/anime_watch_progress_service.dart';
+import '../../../core/services/deep_link_service.dart';
 import '../../../shared/providers/auth_provider.dart';
 import '../../../shared/widgets/common_widgets.dart';
 import '../../../shared/widgets/poster_card.dart';
@@ -503,7 +504,11 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
 
   void _shareAnime(AnimeDetailModel detail) {
     HapticFeedback.selectionClick();
-    final text = '${detail.title} - Tonton di Moko!';
+    final link = DeepLinkService.buildAnimeLink(
+      animeId: widget.animeId,
+      title: detail.title,
+    );
+    final text = 'Tonton ${detail.title} di MOKO!\n$link';
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -513,7 +518,7 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
           children: [
             Icon(CupertinoIcons.checkmark_alt_circle_fill, color: Colors.white, size: 20),
             SizedBox(width: 10),
-            Text('Teks anime berhasil disalin untuk dibagikan!'),
+            Expanded(child: Text('Tautan anime berhasil disalin untuk dibagikan!')),
           ],
         ),
       ),

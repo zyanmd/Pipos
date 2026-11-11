@@ -3,11 +3,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/services/deep_link_service.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../shared/widgets/app_network_image.dart';
 import '../data/models/novel_model.dart';
 import '../data/novel_repository.dart';
 import 'novel_reader_screen.dart';
+import 'novel_genre_detail_screen.dart';
+import '../../../shared/widgets/bouncy_tap.dart';
 
 /// Pure Apple iOS HIG Styled Novel Detail Screen.
 /// Matches ComicDetailScreen aesthetics:
@@ -126,7 +129,11 @@ class _NovelDetailScreenState extends State<NovelDetailScreen> {
   void _shareNovel() {
     HapticFeedback.selectionClick();
     final title = _detail?.displayTitle ?? widget.initialTitle ?? 'Web Novel';
-    final text = '$title - Baca Web Novel di Moko!';
+    final link = DeepLinkService.buildNovelLink(
+      slug: widget.slug,
+      title: title,
+    );
+    final text = 'Baca $title di MOKO!\n$link';
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -136,7 +143,7 @@ class _NovelDetailScreenState extends State<NovelDetailScreen> {
           children: [
             Icon(CupertinoIcons.checkmark_alt_circle_fill, color: Colors.white, size: 20),
             SizedBox(width: 10),
-            Text('Tautan novel berhasil disalin ke clipboard!'),
+            Expanded(child: Text('Tautan novel berhasil disalin ke clipboard!')),
           ],
         ),
       ),
@@ -484,23 +491,36 @@ class _NovelDetailScreenState extends State<NovelDetailScreen> {
                             Wrap(
                               spacing: 6,
                               runSpacing: 6,
-                              children: d.genres.take(4).map((g) {
-                                return Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
-                                  decoration: BoxDecoration(
-                                    color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.35),
-                                      width: 0.7,
+                              children: d.genres.take(6).map((g) {
+                                final slug = g.trim().toLowerCase().replaceAll(RegExp(r'\s+'), '-');
+                                return BouncyTap(
+                                  onTap: () {
+                                    HapticFeedback.lightImpact();
+                                    Navigator.of(context).push(
+                                      CupertinoPageRoute(
+                                        builder: (_) => NovelGenreDetailScreen(
+                                          genre: NovelGenreModel(name: g.trim(), slug: slug),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                                    decoration: BoxDecoration(
+                                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.35),
+                                        width: 0.7,
+                                      ),
                                     ),
-                                  ),
-                                  child: Text(
-                                    g,
-                                    style: TextStyle(
-                                      color: isDark ? Colors.white : Colors.black,
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.w700,
+                                    child: Text(
+                                      g,
+                                      style: TextStyle(
+                                        color: isDark ? Colors.white : Colors.black,
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
                                   ),
                                 );
@@ -857,14 +877,12 @@ class _NovelDetailScreenState extends State<NovelDetailScreen> {
                         label: 'Status',
                         value: d.status,
                         isDark: isDark,
+                        showDivider: d.tags.isNotEmpty,
                       ),
                       if (d.tags.isNotEmpty)
-                        _buildInfoRow(
-                          icon: CupertinoIcons.tag_fill,
-                          label: 'Tag',
-                          value: d.tags,
+                        _buildTagsRow(
+                          tags: d.tags,
                           isDark: isDark,
-                          showDivider: false,
                         ),
                     ],
                   ),
@@ -1013,19 +1031,35 @@ class _NovelDetailScreenState extends State<NovelDetailScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                               child: Row(
                                 children: [
+                                  // Prominent Chapter / Episode Number Badge
                                   Container(
-                                    width: 32,
-                                    height: 32,
+                                    constraints: const BoxConstraints(minWidth: 46),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                                     decoration: BoxDecoration(
                                       color: isLastRead
-                                          ? const Color(0xFF0A84FF).withValues(alpha: 0.2)
-                                          : (isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04)),
-                                      shape: BoxShape.circle,
+                                          ? const Color(0xFF0A84FF).withValues(alpha: 0.22)
+                                          : (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05)),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: isLastRead
+                                            ? const Color(0xFF0A84FF).withValues(alpha: 0.55)
+                                            : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                                        width: 0.7,
+                                      ),
                                     ),
-                                    child: Icon(
-                                      CupertinoIcons.book_fill,
-                                      size: 14,
-                                      color: isLastRead ? const Color(0xFF0A84FF) : (isDark ? Colors.white54 : Colors.black45),
+                                    alignment: Alignment.center,
+                                    child: Text(
+                                      ch.chapterBadge,
+                                      maxLines: 1,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w800,
+                                        color: isLastRead
+                                            ? const Color(0xFF0A84FF)
+                                            : (isDark ? Colors.white : Colors.black87),
+                                        letterSpacing: -0.2,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
@@ -1034,7 +1068,7 @@ class _NovelDetailScreenState extends State<NovelDetailScreen> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          ch.displayTitle,
+                                          ch.cleanSubtitle(_detail?.displayTitle ?? widget.initialTitle ?? ''),
                                           maxLines: 2,
                                           overflow: TextOverflow.ellipsis,
                                           style: TextStyle(
@@ -1221,6 +1255,95 @@ class _NovelDetailScreenState extends State<NovelDetailScreen> {
       width: 0.7,
       height: 28,
       color: isDark ? Colors.white12 : Colors.black12,
+    );
+  }
+
+  Widget _buildTagsRow({
+    required String tags,
+    required bool isDark,
+  }) {
+    final list = tags
+        .split(',')
+        .map((t) => t.trim())
+        .where((t) => t.isNotEmpty)
+        .toList();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.07)
+                      : Colors.black.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(
+                  CupertinoIcons.tag_fill,
+                  size: 14,
+                  color: isDark ? Colors.white70 : Colors.black87,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Tag Populer',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: list.map((tag) {
+              final slug = tag.toLowerCase().replaceAll(RegExp(r'\s+'), '-');
+              return BouncyTap(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.of(context).push(
+                    CupertinoPageRoute(
+                      builder: (_) => NovelGenreDetailScreen(
+                        genre: NovelGenreModel(name: tag, slug: slug),
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.06)
+                        : Colors.black.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Text(
+                    tag,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? Colors.white70 : Colors.black87,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
     );
   }
 

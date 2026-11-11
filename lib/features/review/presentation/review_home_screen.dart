@@ -8,6 +8,7 @@ import '../../../core/utils/app_date_utils.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../shared/providers/auth_provider.dart';
 import '../../../shared/widgets/app_network_image.dart';
+import '../../../shared/widgets/bouncy_tap.dart';
 import '../../../shared/widgets/glass_container.dart';
 import '../../../shared/widgets/decorated_avatar.dart';
 import '../../../shared/widgets/user_profile_card_modal.dart';
@@ -706,6 +707,54 @@ class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
             ),
           ),
         ),
+        floatingActionButton: Padding(
+          padding: const EdgeInsets.only(bottom: 84),
+          child: BouncyTap(
+            onTap: () {
+              HapticFeedback.lightImpact();
+              _openCreateReviewPicker();
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xF20F0F12) : const Color(0xF8FFFFFF),
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF262626) : const Color(0xFFDBDBDB),
+                  width: 0.8,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.14),
+                    blurRadius: 18,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    CupertinoIcons.square_pencil,
+                    size: 16,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Tulis Ulasan',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.2,
+                      color: isDark ? Colors.white : Colors.black,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
     );
   }

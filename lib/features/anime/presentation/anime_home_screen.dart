@@ -34,6 +34,8 @@ import '../../reels/data/models/reel_model.dart';
 import '../../reels/data/reels_repository.dart';
 import '../../reels/presentation/anime_reels_screen.dart';
 import '../../reels/presentation/widgets/anime_reels_tray.dart';
+import '../../../core/services/adult_content_service.dart';
+import '../../jav/presentation/jav_home_screen.dart';
 
 class AnimeHomeScreen extends StatefulWidget {
   const AnimeHomeScreen({super.key});
@@ -978,6 +980,25 @@ class _AnimeHomeScreenState extends State<AnimeHomeScreen> {
                             builder: (_) => const AnimeScheduleScreen(),
                           ),
                         ),
+                      ),
+                      ListenableBuilder(
+                        listenable: AdultContentService.instance,
+                        builder: (context, _) {
+                          if (!AdultContentService.instance.is18Unlocked) {
+                            return const SizedBox.shrink();
+                          }
+                          return _buildIosActionButton(
+                            icon: CupertinoIcons.film_fill,
+                            tooltip: 'Javtiful (JAV)',
+                            iconColor: const Color(0xFFFF2D55),
+                            onTap: () => Navigator.push(
+                              context,
+                              CupertinoPageRoute(
+                                builder: (_) => const JavHomeScreen(),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(width: 12),
                     ],

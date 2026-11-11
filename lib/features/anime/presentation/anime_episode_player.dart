@@ -35,6 +35,7 @@ import '../../../shared/widgets/swipe_to_reply.dart';
 import '../../../shared/widgets/ad_banner_widget.dart';
 import '../../../core/services/pip_service.dart';
 import '../../review/presentation/widgets/review_input_dialog.dart';
+import '../../../shared/widgets/bouncy_tap.dart';
 
 class AnimeEpisodePlayerScreen extends StatefulWidget {
   final String episodeId;
@@ -433,9 +434,8 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
 
   @override
   void didPushNext() {
-    // Layar lain dibuka di atas player video (komik, profil, dialog, dll.)
-    _pausePlayer();
-    PipService.instance.disablePipNow();
+    // Biarkan video tetap berjalan jika user hanya membuka modal/sheet di dalam player,
+    // dan jangan langsung matikan state secara agresif.
   }
 
   @override
@@ -3831,9 +3831,10 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
             ),
           ),
           const SizedBox(width: 10),
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
+          BouncyTap(
+            scaleDown: 0.94,
             onTap: () async {
+              HapticFeedback.lightImpact();
               final auth = context.read<AuthProvider>();
               if (!auth.isAuthenticated) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -3858,7 +3859,7 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
                 subId: widget.episodeId,
                 subTitle: 'Episode $_displayEpisodeNumber',
               );
-              if (res != null && context.mounted) {
+              if (res != null && mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Ulasan berhasil disimpan!'),
@@ -3868,26 +3869,40 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
               }
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7.5),
               decoration: BoxDecoration(
-                color: const Color(0xFF6366F1).withValues(alpha: isDark ? 0.22 : 0.12),
+                color: isDark ? const Color(0xFF1E1E22) : const Color(0xFFEBEBF0),
                 borderRadius: BorderRadius.circular(22),
                 border: Border.all(
-                  color: const Color(0xFF6366F1).withValues(alpha: 0.35),
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.12)
+                      : Colors.black.withValues(alpha: 0.08),
                   width: 0.8,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(CupertinoIcons.square_pencil, size: 14, color: Color(0xFF6366F1)),
+                  Icon(
+                    CupertinoIcons.square_pencil,
+                    size: 14,
+                    color: isDark ? Colors.white : const Color(0xFF1C1C1E),
+                  ),
                   const SizedBox(width: 5),
                   Text(
                     'Ulas',
                     style: GoogleFonts.inter(
-                      fontSize: 12,
+                      fontSize: 12.5,
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFF6366F1),
+                      letterSpacing: -0.2,
+                      color: isDark ? Colors.white : const Color(0xFF1C1C1E),
                     ),
                   ),
                 ],

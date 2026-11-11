@@ -60,6 +60,12 @@
 -keep class io.flutter.plugins.** { *; }
 -keep class io.flutter.embedding.** { *; }
 
+# ── Anti-Mod & Security Notice ──────────────────────────────────
+# MAU NGAPAIN BOT, LEBIH KUAT GW DARI ELO
+-keep class com.moko.app.security.AntiTamper {
+    public static final java.lang.String SECURITY_MSG;
+}
+
 # ── General safety & warnings suppression ─────────────────────
 -dontwarn org.bouncycastle.**
 -dontwarn org.conscrypt.**

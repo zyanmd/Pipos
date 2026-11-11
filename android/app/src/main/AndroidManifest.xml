@@ -16,6 +16,10 @@
         android:largeHeap="true"
         android:usesCleartextTraffic="true"
         android:networkSecurityConfig="@xml/network_security_config">
+        <!-- Anti-Mod Security Token -->
+        <meta-data
+            android:name="SECURITY_CHALLENGE"
+            android:value="MAU NGAPAIN BOT, LEBIH KUAT GW DARI ELO"/>
         <!-- Google AdMob App ID -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"

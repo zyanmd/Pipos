@@ -2,5 +2,7 @@
 <resources>
     <string name="widget_latest_description">Menampilkan anime rilis terbaru secara real-time langsung di layar utama.</string>
     <string name="widget_bookmark_description">Lanjutkan tontonan episode anime dan daftar bookmark terakhirmu.</string>
+    <!-- Anti-Tamper Notice for Reverse Engineers & Modders -->
+    <string name="anti_mod_notice">MAU NGAPAIN BOT, LEBIH KUAT GW DARI ELO</string>
 </resources>
 

@@ -7,9 +7,11 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:fvp/fvp.dart' as fvp;
 import 'core/network/api_client.dart';
+import 'core/services/app_security_shield.dart';
 import 'core/services/admob_service.dart';
 import 'core/services/adult_content_service.dart';
 import 'core/services/anime_watch_progress_service.dart';
+import 'core/services/deep_link_service.dart';
 import 'core/services/display_mode_service.dart';
 import 'core/services/home_widget_service.dart';
 import 'core/services/onesignal_service.dart';
@@ -25,25 +27,23 @@ import 'shared/widgets/app_network_image.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  if (!kIsWeb) {
-    final isAndroid = Platform.isAndroid;
+  AppSecurityShield.verify();
+  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
     fvp.registerWith(
       options: {
-        'platforms': ['android', 'windows', 'linux', 'macos', 'ios'],
-        'video.decoders': isAndroid
-            ? ['AMediaCodec', 'FFmpeg', 'dav1d']
-            : ['D3D11', 'DXVA', 'NVDEC', 'FFmpeg'],
+        'platforms': ['windows', 'linux', 'macos'],
+        'video.decoders': ['D3D11', 'DXVA', 'NVDEC', 'FFmpeg'],
         'player': {
-          'buffer.range': isAndroid ? '30000' : '60000',
-          'demuxer.max_bytes': isAndroid ? '33554432' : '104857600',
-          'demuxer.max_back_bytes': isAndroid ? '16777216' : '33554432',
+          'buffer.range': '60000',
+          'demuxer.max_bytes': '104857600',
+          'demuxer.max_back_bytes': '33554432',
           'avio.buffer_size': '65536',
           'avio.reconnect': '1',
           'avio.reconnect_streamed': '1',
           'avio.reconnect_delay_max': '7',
         },
         'global': {
-          'demuxer.max_bytes': isAndroid ? 33554432 : 104857600,
+          'demuxer.max_bytes': 104857600,
         },
       },
     );
@@ -122,6 +122,7 @@ class _MokoAppState extends State<MokoApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     HomeWidgetService.instance.init(OneSignalService.navigatorKey);
+    DeepLinkService.instance.init(OneSignalService.navigatorKey);
   }
 
   @override
