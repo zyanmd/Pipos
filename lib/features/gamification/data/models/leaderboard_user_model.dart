@@ -1,5 +1,5 @@
-import '../../../../core/config/api_config.dart';
 import '../../../../shared/widgets/smooth_avatar_decoration.dart';
+import '../../../auth/data/models/user_model.dart';
 
 class LeaderboardUserModel {
   final int rankPosition;
@@ -43,7 +43,7 @@ class LeaderboardUserModel {
     }
 
     final rawAvatar = json['avatar_url']?.toString() ?? json['avatar']?.toString() ?? '';
-    final avatar = ApiConfig.sanitizeUrl(rawAvatar);
+    final avatar = UserModel.normalizeAvatarUrl(rawAvatar) ?? '';
 
     return LeaderboardUserModel(
       rankPosition: (json['rank_position'] as num?)?.toInt() ?? rankPositionFallback ?? 0,
