@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import '../../../profile/data/models/profile_font_model.dart';
 import '../../../../core/config/api_config.dart';
 import '../../../../shared/widgets/smooth_avatar_decoration.dart';
@@ -39,6 +40,10 @@ class UserModel {
   final String? animeNotifMode;
   final String? comicNotifMode;
   final bool birthdayNotifEnabled;
+  final int xp;
+  final int level;
+  final String? rank;
+  final int streak;
 
   UserModel({
     required this.id,
@@ -76,7 +81,57 @@ class UserModel {
     this.animeNotifMode,
     this.comicNotifMode,
     this.birthdayNotifEnabled = true,
-  });
+    this.xp = 0,
+    int? level,
+    this.rank,
+    this.streak = 0,
+  }) : level = level ?? calculateLevel(xp);
+
+  /// Quadratic Level progression: BaseXP(L) = 50 * (L - 1) * L
+  static int calculateLevel(int xp) {
+    if (xp <= 0) return 1;
+    final val = (1.0 + math.sqrt(1.0 + 0.08 * xp.toDouble())) / 2.0;
+    final lvl = val.floor();
+    return lvl < 1 ? 1 : lvl;
+  }
+
+  static int levelBaseXp(int lvl) {
+    if (lvl <= 1) return 0;
+    return 50 * (lvl - 1) * lvl;
+  }
+
+  static int nextLevelRequiredXp(int lvl) {
+    if (lvl < 1) lvl = 1;
+    return 50 * lvl * (lvl + 1);
+  }
+
+  static String rankTitleForLevel(int lvl) {
+    if (lvl <= 2) return 'Ashigaru V';
+    if (lvl <= 4) return 'Ashigaru IV';
+    if (lvl <= 6) return 'Ashigaru III';
+    if (lvl <= 8) return 'Ashigaru II';
+    if (lvl <= 10) return 'Ashigaru I';
+    if (lvl <= 13) return 'Samurai V';
+    if (lvl <= 16) return 'Samurai IV';
+    if (lvl <= 19) return 'Samurai III';
+    if (lvl <= 22) return 'Samurai II';
+    if (lvl <= 25) return 'Samurai I';
+    if (lvl <= 30) return 'Hatamoto III';
+    if (lvl <= 35) return 'Hatamoto II';
+    if (lvl <= 40) return 'Hatamoto I';
+    if (lvl <= 50) return 'Daimyo';
+    if (lvl <= 65) return 'Shogun';
+    if (lvl <= 80) return 'Hashira';
+    if (lvl <= 99) return 'S-Rank Hunter';
+    return 'Legenda Animeverse';
+  }
+
+  int get currentLevelBaseXp => levelBaseXp(level);
+  int get nextLevelXp => nextLevelRequiredXp(level);
+  int get currentLevelProgressXp => (xp - currentLevelBaseXp).clamp(0, nextLevelXp - currentLevelBaseXp);
+  int get currentLevelSpanXp => (nextLevelXp - currentLevelBaseXp).clamp(1, 99999999);
+  double get levelProgressFraction => (currentLevelProgressXp / currentLevelSpanXp).clamp(0.0, 1.0);
+  String get displayRank => (rank != null && rank!.isNotEmpty) ? rank! : rankTitleForLevel(level);
 
   bool get isGoogleUser =>
       (googleId != null && googleId!.isNotEmpty) ||
@@ -276,6 +331,10 @@ class UserModel {
           : (j['birthday_notif_enabled'] == true ||
               j['birthday_notif_enabled']?.toString() == '1' ||
               j['birthday_notif_enabled']?.toString().toLowerCase() == 'true'),
+      xp: (j['xp'] as num?)?.toInt() ?? int.tryParse(j['xp']?.toString() ?? '') ?? 0,
+      level: (j['level'] as num?)?.toInt() ?? int.tryParse(j['level']?.toString() ?? ''),
+      rank: j['rank']?.toString(),
+      streak: (j['streak'] as num?)?.toInt() ?? int.tryParse(j['streak']?.toString() ?? '') ?? 0,
     );
   }
 
@@ -376,6 +435,10 @@ class UserModel {
         'anime_notif_mode': animeNotifMode ?? notifMode,
         'comic_notif_mode': comicNotifMode ?? notifMode,
         'birthday_notif_enabled': birthdayNotifEnabled,
+        'xp': xp,
+        'level': level,
+        'rank': rank,
+        'streak': streak,
       };
 
   UserModel copyWith({
@@ -413,6 +476,10 @@ class UserModel {
     bool? is18Plus,
     bool clearBirthday = false,
     String? notifMode,
+    int? xp,
+    int? level,
+    String? rank,
+    int? streak,
   }) =>
       UserModel(
         id: id ?? this.id,
@@ -446,6 +513,10 @@ class UserModel {
         isBirthdayToday: isBirthdayToday ?? this.isBirthdayToday,
         is18Plus: is18Plus ?? this.is18Plus,
         notifMode: notifMode ?? this.notifMode,
+        xp: xp ?? this.xp,
+        level: level ?? this.level,
+        rank: rank ?? this.rank,
+        streak: streak ?? this.streak,
       );
 }
 

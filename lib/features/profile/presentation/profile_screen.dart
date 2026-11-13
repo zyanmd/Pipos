@@ -33,6 +33,8 @@ import '../../avatar_decoration/presentation/avatar_decoration_screen.dart';
 import '../../../shared/widgets/user_profile_card_modal.dart';
 import '../../../shared/widgets/calm_gif.dart';
 import '../data/models/profile_font_model.dart';
+import '../../gamification/presentation/widgets/level_xp_card.dart';
+import '../../gamification/presentation/leaderboard_screen.dart';
 import '../../../shared/widgets/ad_banner_widget.dart';
 import '../../../shared/widgets/bouncy_tap.dart';
 import '../../../shared/widgets/glass_container.dart';
@@ -1071,6 +1073,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                           _buildGlassTile(
+                            icon: CupertinoIcons.rosette,
+                            title: 'Papan Peringkat (Leaderboard)',
+                            subtitle: 'Peringkat petualang teratas & perolehan XP',
+                            isDark: isDark,
+                            showChevron: true,
+                            onTap: () => Navigator.push(
+                              context,
+                              CupertinoPageRoute(builder: (_) => const LeaderboardScreen()),
+                            ),
+                          ),
+                          _buildGlassTile(
                             icon: CupertinoIcons.bell_fill,
                             title: 'Pusat Notifikasi',
                             subtitle: 'Notifikasi like & balasan komentar',
@@ -2012,7 +2025,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
+
+              // Level & XP Gamification Card
+              LevelXpCard(
+                user: user,
+                onXpUpdated: _loadProfile,
+              ),
+
+              const SizedBox(height: 12),
 
               // Integrated Clean Stats Bar (Natural Flow, no card wrapper!)
               Container(

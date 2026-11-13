@@ -33,6 +33,10 @@ class ApiConfig {
   static String get zpicBase => '$apiBase/zpic';
   static String get javBase => '$apiBase/javtiful';
 
+  static String get userLeaderboard => ApiEndpoints.userLeaderboard;
+  static String get userXpMe => ApiEndpoints.userXpMe;
+  static String get userXpClaimDaily => ApiEndpoints.userXpClaimDaily;
+
   /// Connection timeout for all HTTP requests
   static const Duration connectTimeout = Duration(seconds: 20);
   static const Duration receiveTimeout = Duration(seconds: 60);
@@ -173,6 +177,9 @@ class ApiEndpoints {
   static const String userBirthday = '/users/profile/me/birthday';
   static const String userBirthdayVisibility = '/users/profile/me/birthday/visibility';
   static const String userNotificationPreference = '/users/notification-preference';
+  static const String userLeaderboard = '/users/leaderboard';
+  static const String userXpMe = '/users/xp/me';
+  static const String userXpClaimDaily = '/users/xp/claim-daily';
 
   // ─── FRIENDSHIP / PERTEMANAN ───
   static String friendStatus(String u) => '/friends/status/$u';

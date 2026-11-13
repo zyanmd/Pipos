@@ -20,6 +20,7 @@ import 'calm_gif.dart';
 import '../../features/anime/data/models/genre_role_model.dart';
 import '../../features/anime/presentation/widgets/genre_role_widgets.dart';
 import '../../features/profile/presentation/other_user_profile_screen.dart';
+import '../../features/gamification/presentation/widgets/level_xp_card.dart';
 
 /// Navigates to the full OtherUserProfileScreen instead of modal bottom sheet.
 Future<void> showUserProfileCard(
@@ -648,6 +649,11 @@ class _UserProfileCardSheetState extends State<_UserProfileCardSheet> {
                     color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
                   ),
                 ),
+
+                const SizedBox(height: 10),
+
+                // Level & XP Mini Card
+                LevelXpCard(user: user, compact: true),
 
                 // ── PERAYAAN SELAMAT ULANG TAHUN (FESTIVE BANNER DI CARD) ──
                 if (_isBirthdayToday(user) && !user.isBirthdayPrivate) ...[

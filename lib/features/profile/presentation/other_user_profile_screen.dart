@@ -22,6 +22,7 @@ import 'edit_profile_screen.dart';
 import 'friend_requests_screen.dart';
 import '../../anime/data/models/genre_role_model.dart';
 import '../../anime/presentation/widgets/genre_role_widgets.dart';
+import '../../gamification/presentation/widgets/level_xp_card.dart';
 
 class OtherUserProfileScreen extends StatefulWidget {
   final String username;
@@ -1373,7 +1374,13 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen>
           // Action Buttons: Friend Request & Chat
           _buildFriendActionSection(fontModel, isDark),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
+
+          // Level & XP Gamification Card
+          if (_user != null) ...[
+            LevelXpCard(user: _user),
+            const SizedBox(height: 14),
+          ],
 
           // ─── STATS BAR: ANIME, KOMIK, BOOKMARK, DURASI ───
           _buildMedsosStatsBar(fontModel, isDark),
