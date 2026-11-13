@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import '../../../../core/network/api_client.dart';
 import '../../profile/data/profile_repository.dart';
@@ -180,14 +181,14 @@ class ReviewRepository {
           'item_type': itemType,
           'target_id': targetId,
           'target_title': targetTitle,
-          if (targetCover != null) 'target_cover': targetCover,
-          if (subId != null) 'sub_id': subId,
-          if (subTitle != null) 'sub_title': subTitle,
-          if (content != null) 'content': content,
+          if (targetCover != null && targetCover.isNotEmpty) 'target_cover': targetCover,
+          if (subId != null && subId.isNotEmpty) 'sub_id': subId,
+          if (subTitle != null && subTitle.isNotEmpty) 'sub_title': subTitle,
+          if (content != null && content.isNotEmpty) 'content': content,
           'rating': rating,
           'status': status,
-          'media_url': mediaUrl,
-          if (mediaType != null) 'media_type': mediaType,
+          if (mediaUrl != null && mediaUrl.isNotEmpty) 'media_url': mediaUrl,
+          if (mediaType != null && mediaType.isNotEmpty) 'media_type': mediaType,
           if (clipStart != null) 'clip_start': clipStart,
           if (clipEnd != null) 'clip_end': clipEnd,
         };
@@ -204,7 +205,9 @@ class ReviewRepository {
           return UserReviewModel.fromJson(Map<String, dynamic>.from(resData));
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[ReviewRepository] saveReview error: $e');
+    }
     return null;
   }
 

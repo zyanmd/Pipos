@@ -208,7 +208,7 @@ class _ReviewInputDialogState extends State<ReviewInputDialog> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Gagal menyimpan ulasan'),
+            content: Text('Gagal menyimpan ulasan. Periksa koneksi atau coba lagi.'),
             behavior: SnackBarBehavior.floating,
           ),
         );
