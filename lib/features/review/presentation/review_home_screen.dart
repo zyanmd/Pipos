@@ -98,7 +98,7 @@ class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
   String get _sortLabel {
     switch (_selectedSort) {
       case 'foryou':
-        return 'Untuk Anda';
+        return 'Algoritma FYP';
       case 'popular':
         return 'Terpopuler';
       case 'random':
@@ -479,7 +479,7 @@ class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
     const scopes = [
       (
         key: 'community',
-        label: 'Komunitas',
+        label: 'FYP',
         icon: CupertinoIcons.sparkles,
       ),
       (
