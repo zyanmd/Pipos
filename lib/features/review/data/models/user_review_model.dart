@@ -17,12 +17,16 @@ class UserReviewModel {
   final String? subTitle; // misal 'Episode 1' atau 'Chapter 1194'
   final String? content;
   final String? mediaUrl;
-  final String? mediaType; // 'image', 'gif'
+  final String? mediaType; // 'image', 'gif', 'clip', 'video'
+  final double? clipStart; // detik mulai (misal 65.0 = 01:05)
+  final double? clipEnd; // detik selesai (misal 95.0 = 01:35)
   final double rating;
   final String status; // 'planned', 'replaying', 'completed'
   final int likesCount;
   final int commentsCount;
   final bool userLiked;
+  final int meritsCount;
+  final bool userMerited;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -42,11 +46,15 @@ class UserReviewModel {
     this.content,
     this.mediaUrl,
     this.mediaType,
+    this.clipStart,
+    this.clipEnd,
     this.rating = 0.0,
     this.status = 'completed',
     this.likesCount = 0,
     this.commentsCount = 0,
     this.userLiked = false,
+    this.meritsCount = 0,
+    this.userMerited = false,
     this.createdAt,
     this.updatedAt,
   });
@@ -117,11 +125,15 @@ class UserReviewModel {
       content: json['content'] as String?,
       mediaUrl: json['media_url'] as String?,
       mediaType: json['media_type'] as String?,
+      clipStart: json['clip_start'] != null ? (json['clip_start'] as num).toDouble() : null,
+      clipEnd: json['clip_end'] != null ? (json['clip_end'] as num).toDouble() : null,
       rating: json['rating'] != null ? (json['rating'] as num).toDouble() : 0.0,
       status: json['status'] as String? ?? 'completed',
       likesCount: json['likes_count'] is int ? json['likes_count'] as int : int.tryParse('${json['likes_count']}') ?? 0,
       commentsCount: json['comments_count'] is int ? json['comments_count'] as int : int.tryParse('${json['comments_count']}') ?? 0,
       userLiked: json['user_liked'] == true,
+      meritsCount: json['merits_count'] is int ? json['merits_count'] as int : int.tryParse('${json['merits_count']}') ?? 0,
+      userMerited: json['user_merited'] == true,
       createdAt: AppDateUtils.parseToLocal(json['created_at']),
       updatedAt: AppDateUtils.parseToLocal(json['updated_at']),
     );
@@ -144,11 +156,15 @@ class UserReviewModel {
       'content': content,
       'media_url': mediaUrl,
       'media_type': mediaType,
+      'clip_start': clipStart,
+      'clip_end': clipEnd,
       'rating': rating,
       'status': status,
       'likes_count': likesCount,
       'comments_count': commentsCount,
       'user_liked': userLiked,
+      'merits_count': meritsCount,
+      'user_merited': userMerited,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -170,11 +186,15 @@ class UserReviewModel {
     String? content,
     String? mediaUrl,
     String? mediaType,
+    double? clipStart,
+    double? clipEnd,
     double? rating,
     String? status,
     int? likesCount,
     int? commentsCount,
     bool? userLiked,
+    int? meritsCount,
+    bool? userMerited,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -194,11 +214,15 @@ class UserReviewModel {
       content: content ?? this.content,
       mediaUrl: mediaUrl ?? this.mediaUrl,
       mediaType: mediaType ?? this.mediaType,
+      clipStart: clipStart ?? this.clipStart,
+      clipEnd: clipEnd ?? this.clipEnd,
       rating: rating ?? this.rating,
       status: status ?? this.status,
       likesCount: likesCount ?? this.likesCount,
       commentsCount: commentsCount ?? this.commentsCount,
       userLiked: userLiked ?? this.userLiked,
+      meritsCount: meritsCount ?? this.meritsCount,
+      userMerited: userMerited ?? this.userMerited,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -213,6 +237,28 @@ class UserReviewModel {
       default:
         return 'Selesai Diulas';
     }
+  }
+
+  bool get isClip =>
+      (mediaType == 'clip') ||
+      (clipStart != null && clipEnd != null && clipEnd! > (clipStart ?? 0));
+
+  static String formatSeconds(double totalSec) {
+    final s = totalSec.round();
+    final m = s ~/ 60;
+    final remS = s % 60;
+    return '${m.toString().padLeft(2, '0')}:${remS.toString().padLeft(2, '0')}';
+  }
+
+  String get clipTimeRangeFormatted {
+    if (clipStart == null || clipEnd == null) return '';
+    return '${formatSeconds(clipStart!)} - ${formatSeconds(clipEnd!)}';
+  }
+
+  String get clipDurationFormatted {
+    if (clipStart == null || clipEnd == null) return '';
+    final diff = (clipEnd! - clipStart!).round().abs();
+    return '$diff dtk';
   }
 }
 

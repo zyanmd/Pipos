@@ -17,6 +17,7 @@ import '../../anime/presentation/anime_episode_player.dart';
 import '../../comic/presentation/comic_detail_screen.dart';
 import '../data/models/user_review_model.dart';
 import '../data/review_repository.dart';
+import 'widgets/review_clip_player_widget.dart';
 import 'widgets/review_comments_sheet.dart';
 import 'widgets/review_input_dialog.dart';
 import 'widgets/review_target_picker_sheet.dart';
@@ -188,6 +189,82 @@ class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
     }
   }
 
+  Future<void> _toggleMerit(UserReviewModel item) async {
+    final auth = context.read<AuthProvider>();
+    if (!auth.isAuthenticated) {
+      HapticFeedback.lightImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text('Login untuk memberikan Merit'),
+        ),
+      );
+      return;
+    }
+
+    if (auth.user?.id == item.userId) {
+      HapticFeedback.lightImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text('Tidak dapat memberi Merit pada ulasan sendiri'),
+        ),
+      );
+      return;
+    }
+
+    HapticFeedback.mediumImpact();
+
+    // Optimistic Update
+    final newMerited = !item.userMerited;
+    final newCount = newMerited
+        ? item.meritsCount + 1
+        : (item.meritsCount > 0 ? item.meritsCount - 1 : 0);
+
+    setState(() {
+      final idx = _reviews.indexWhere((r) => r.id == item.id);
+      if (idx != -1) {
+        _reviews[idx] = _reviews[idx].copyWith(
+          userMerited: newMerited,
+          meritsCount: newCount,
+        );
+      }
+    });
+
+    final res = await ReviewRepository.instance.giveMerit(item.id);
+    if (res != null && mounted) {
+      final success = res['success'] == true;
+      if (success) {
+        setState(() {
+          final idx = _reviews.indexWhere((r) => r.id == item.id);
+          if (idx != -1) {
+            _reviews[idx] = _reviews[idx].copyWith(
+              userMerited: res['merited'] == true,
+              meritsCount: res['merits_count'] as int? ?? newCount,
+            );
+          }
+        });
+      } else {
+        // Revert state if backend rejected
+        setState(() {
+          final idx = _reviews.indexWhere((r) => r.id == item.id);
+          if (idx != -1) {
+            _reviews[idx] = _reviews[idx].copyWith(
+              userMerited: item.userMerited,
+              meritsCount: item.meritsCount,
+            );
+          }
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text(res['error'] as String? ?? 'Gagal memberi Merit'),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _openComments(UserReviewModel item) async {
     HapticFeedback.lightImpact();
     final newCount = await ReviewCommentsSheet.show(
@@ -318,6 +395,7 @@ class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
               animeId: item.targetId,
               animeTitle: item.targetTitle,
               animeThumb: item.targetCover,
+              startAt: item.clipStart != null ? Duration(seconds: item.clipStart!.toInt()) : null,
             ),
           ),
         );
@@ -868,6 +946,46 @@ class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
                   ),
                 ),
 
+                // Merit Prestige Badge (jika ada yang memberi merit)
+                if (item.meritsCount > 0) ...[
+                  const SizedBox(width: 5),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFFFF9500).withValues(alpha: isDark ? 0.25 : 0.15),
+                          const Color(0xFFFFCC00).withValues(alpha: isDark ? 0.18 : 0.10),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: const Color(0xFFFF9500).withValues(alpha: 0.35),
+                        width: 0.6,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          CupertinoIcons.sparkles,
+                          size: 11,
+                          color: Color(0xFFFF9500),
+                        ),
+                        const SizedBox(width: 3.5),
+                        Text(
+                          '${item.meritsCount} Merit',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFFFF9500),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
                 // More Menu if owner
                 if (isOwner) ...[
                   const SizedBox(width: 4),
@@ -1035,8 +1153,14 @@ class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
               ),
             ],
 
-            // ── 4. LAMPIRAN GAMBAR / GIF ──
-            if (item.mediaUrl != null && item.mediaUrl!.isNotEmpty) ...[
+            // ── 4. LAMPIRAN KLIP ANIME / GAMBAR / GIF ──
+            if (item.isClip) ...[
+              const SizedBox(height: 12),
+              ReviewClipPlayerWidget(
+                review: item,
+                onOpenFullPlayer: () => _navigateToTarget(item),
+              ),
+            ] else if (item.mediaUrl != null && item.mediaUrl!.isNotEmpty) ...[
               const SizedBox(height: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(14),
@@ -1128,6 +1252,50 @@ class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: isDark ? Colors.white70 : Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+
+                // Tombol Merit (Pemberian Penghargaan/Reputasi)
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _toggleMerit(item),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: item.userMerited
+                          ? const Color(0xFFFF9500).withValues(alpha: 0.15)
+                          : (isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03)),
+                      borderRadius: BorderRadius.circular(14),
+                      border: item.userMerited
+                          ? Border.all(
+                              color: const Color(0xFFFF9500).withValues(alpha: 0.45),
+                              width: 0.8,
+                            )
+                          : null,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          item.userMerited ? CupertinoIcons.sparkles : CupertinoIcons.sparkles,
+                          size: 15,
+                          color: item.userMerited
+                              ? const Color(0xFFFF9500)
+                              : (isDark ? Colors.white60 : Colors.black54),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          item.meritsCount > 0 ? '${item.meritsCount}' : 'Merit',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: item.userMerited
+                                ? const Color(0xFFFF9500)
+                                : (isDark ? Colors.white70 : Colors.black87),
                           ),
                         ),
                       ],

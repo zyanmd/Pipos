@@ -449,6 +449,7 @@ class ApiEndpoints {
   static const String reviewCheck = '/reviews/check';
   static String reviewDetail(int id) => '/reviews/$id';
   static String reviewLike(int id) => '/reviews/$id/like';
+  static String reviewMerit(int id) => '/reviews/$id/merit';
   static String reviewComments(int id) => '/reviews/$id/comments';
   static String reviewCommentDelete(int id) => '/reviews/comments/$id';
 

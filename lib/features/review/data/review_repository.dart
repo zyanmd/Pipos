@@ -134,7 +134,7 @@ class ReviewRepository {
     return null;
   }
 
-  /// Simpan atau update ulasan (Support teks saja, atau lampiran foto/GIF)
+  /// Simpan atau update ulasan (Support teks saja, lampiran foto/GIF, atau klip video)
   Future<UserReviewModel?> saveReview({
     required String itemType,
     required String targetId,
@@ -147,6 +147,9 @@ class ReviewRepository {
     String status = 'completed',
     File? mediaFile,
     String? mediaUrl,
+    String? mediaType,
+    double? clipStart,
+    double? clipEnd,
   }) async {
     try {
       dynamic dataPayload;
@@ -163,6 +166,10 @@ class ReviewRepository {
           if (content != null) 'content': content,
           'rating': rating,
           'status': status,
+          if (mediaUrl != null) 'media_url': mediaUrl,
+          if (mediaType != null) 'media_type': mediaType,
+          if (clipStart != null) 'clip_start': clipStart,
+          if (clipEnd != null) 'clip_end': clipEnd,
           'media_file': await MultipartFile.fromFile(
             mediaFile.path,
             filename: fileName,
@@ -180,6 +187,9 @@ class ReviewRepository {
           'rating': rating,
           'status': status,
           'media_url': mediaUrl,
+          if (mediaType != null) 'media_type': mediaType,
+          if (clipStart != null) 'clip_start': clipStart,
+          if (clipEnd != null) 'clip_end': clipEnd,
         };
       }
 
@@ -223,6 +233,32 @@ class ReviewRepository {
               : int.tryParse('${response.data['likes_count']}') ?? 0,
         };
       }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Berikan atau batalkan Merit pada ulasan berkualitas
+  Future<Map<String, dynamic>?> giveMerit(int reviewId, {int amount = 1, String? message}) async {
+    try {
+      final response = await ApiClient.instance.post(
+        ApiEndpoints.reviewMerit(reviewId),
+        data: {
+          'amount': amount,
+          if (message != null && message.isNotEmpty) 'message': message,
+        },
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        return {
+          'merited': response.data['merited'] == true,
+          'merits_count': response.data['merits_count'] is int
+              ? response.data['merits_count'] as int
+              : int.tryParse('${response.data['merits_count']}') ?? 0,
+          'message': response.data['message']?.toString() ?? 'Merit berhasil!',
+        };
+      }
+    } on DioException catch (dioErr) {
+      final errMsg = dioErr.response?.data?['error']?.toString();
+      return {'error': errMsg ?? 'Gagal memberikan Merit'};
     } catch (_) {}
     return null;
   }
