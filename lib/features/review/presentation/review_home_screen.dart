@@ -32,9 +32,9 @@ class ReviewHomeScreen extends StatefulWidget {
 }
 
 class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
-  String _selectedScope = 'community'; // 'community' atau 'mine'
+  String _selectedScope = 'community'; // 'community', 'foryou', 'friends', 'mine'
   String _selectedType = 'all'; // 'all', 'anime', 'comic'
-  String _selectedSort = 'latest'; // 'latest', 'popular', 'random'
+  String _selectedSort = 'foryou'; // 'foryou', 'latest', 'popular', 'random'
   List<UserReviewModel> _reviews = [];
   bool _isLoading = true;
 
@@ -97,6 +97,8 @@ class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
 
   String get _sortLabel {
     switch (_selectedSort) {
+      case 'foryou':
+        return 'Untuk Anda';
       case 'popular':
         return 'Terpopuler';
       case 'random':
@@ -112,7 +114,23 @@ class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
       context: context,
       builder: (ctx) => CupertinoActionSheet(
         title: const Text('Urutkan Ulasan'),
+        message: const Text('Pilih metode pengurutan feed ulasan'),
         actions: [
+          CupertinoActionSheetAction(
+            isDefaultAction: _selectedSort == 'foryou',
+            onPressed: () {
+              Navigator.pop(ctx);
+              _onSortChanged('foryou');
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(CupertinoIcons.flame_fill, size: 18, color: Color(0xFFFF5E3A)),
+                SizedBox(width: 8),
+                Text('Untuk Anda (Algoritma FYP)'),
+              ],
+            ),
+          ),
           CupertinoActionSheetAction(
             isDefaultAction: _selectedSort == 'latest',
             onPressed: () {
