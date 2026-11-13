@@ -26,6 +26,7 @@ import '../../chat/presentation/widgets/chat_marquee_banner.dart';
 import '../data/models/ylnime_extra_models.dart';
 import 'anime_hyper_screen.dart';
 import 'anime_episode_player.dart';
+import '../../character_vote/presentation/character_vote_screen.dart';
 import '../../../shared/widgets/app_network_image.dart';
 import '../../../shared/widgets/ad_banner_widget.dart';
 import '../../notifications/presentation/widgets/universal_notification_button.dart';
@@ -1061,6 +1062,17 @@ class _AnimeHomeScreenState extends State<AnimeHomeScreen> {
                           onTap: () => Navigator.push(
                             context,
                             CupertinoPageRoute(builder: (_) => const AnimeNewReleasesScreen()),
+                          ),
+                          isDark: isDark,
+                        ),
+
+                        const SizedBox(width: 8),
+                        _buildCleanNavPill(
+                          icon: CupertinoIcons.heart_fill,
+                          label: 'Vote Karakter',
+                          onTap: () => Navigator.push(
+                            context,
+                            CupertinoPageRoute(builder: (_) => const CharacterVoteScreen()),
                           ),
                           isDark: isDark,
                         ),
