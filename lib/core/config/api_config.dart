@@ -37,11 +37,6 @@ class ApiConfig {
   static String get userXpMe => ApiEndpoints.userXpMe;
   static String get userXpClaimDaily => ApiEndpoints.userXpClaimDaily;
 
-  static String characterVoteLeaderboard(String cat) => ApiEndpoints.characterVoteLeaderboard(cat);
-  static String get characterVoteCategories => ApiEndpoints.characterVoteCategories;
-  static String get characterVoteAction => ApiEndpoints.characterVoteAction;
-  static String characterVoteSearch(String q) => ApiEndpoints.characterVoteSearch(q);
-
   /// Connection timeout for all HTTP requests
   static const Duration connectTimeout = Duration(seconds: 20);
   static const Duration receiveTimeout = Duration(seconds: 60);
@@ -185,10 +180,6 @@ class ApiEndpoints {
   static const String userLeaderboard = '/users/leaderboard';
   static const String userXpMe = '/users/xp/me';
   static const String userXpClaimDaily = '/users/xp/claim-daily';
-  static const String characterVoteCategories = '/character-votes/categories';
-  static String characterVoteLeaderboard(String cat) => '/character-votes/leaderboard?category=$cat';
-  static const String characterVoteAction = '/character-votes/vote';
-  static String characterVoteSearch(String q) => '/character-votes/search?q=${Uri.encodeQueryComponent(q)}';
 
   // ─── FRIENDSHIP / PERTEMANAN ───
   static String friendStatus(String u) => '/friends/status/$u';

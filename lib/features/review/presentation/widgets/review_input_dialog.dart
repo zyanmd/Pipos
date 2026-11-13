@@ -21,6 +21,7 @@ class ReviewInputDialog extends StatefulWidget {
   final double? initialClipEnd;
   final String? initialMediaUrl;
   final String? initialMediaType;
+  final double? playbackPosition;
 
   const ReviewInputDialog({
     super.key,
@@ -35,6 +36,7 @@ class ReviewInputDialog extends StatefulWidget {
     this.initialClipEnd,
     this.initialMediaUrl,
     this.initialMediaType,
+    this.playbackPosition,
   });
 
   static Future<UserReviewModel?> show(
@@ -51,6 +53,7 @@ class ReviewInputDialog extends StatefulWidget {
     double? initialClipEnd,
     String? initialMediaUrl,
     String? initialMediaType,
+    double? playbackPosition,
   }) {
     return showModalBottomSheet<UserReviewModel>(
       context: context,
@@ -68,6 +71,7 @@ class ReviewInputDialog extends StatefulWidget {
         initialClipEnd: initialClipEnd,
         initialMediaUrl: initialMediaUrl,
         initialMediaType: initialMediaType,
+        playbackPosition: playbackPosition,
       ),
     );
   }
@@ -218,7 +222,8 @@ class _ReviewInputDialogState extends State<ReviewInputDialog> {
 
   void _showClipTrimmerSheet() {
     HapticFeedback.lightImpact();
-    double start = _clipStart ?? 0.0;
+    final defaultPos = widget.playbackPosition ?? 0.0;
+    double start = _clipStart ?? (defaultPos > 0 ? (defaultPos - 10.0).clamp(0.0, 7200.0) : 0.0);
     double end = _clipEnd ?? (start + 30.0);
 
     showModalBottomSheet<void>(
@@ -409,6 +414,11 @@ class _ReviewInputDialogState extends State<ReviewInputDialog> {
                               _clipEnd = end;
                               _mediaType = 'clip';
                               _selectedMedia = null;
+                              if ((_existingMediaUrl == null || _existingMediaUrl!.isEmpty) &&
+                                  widget.initialMediaUrl != null &&
+                                  widget.initialMediaUrl!.isNotEmpty) {
+                                _existingMediaUrl = widget.initialMediaUrl;
+                              }
                             });
                             Navigator.pop(ctx);
                           },

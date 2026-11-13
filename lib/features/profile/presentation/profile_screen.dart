@@ -35,7 +35,6 @@ import '../../../shared/widgets/calm_gif.dart';
 import '../data/models/profile_font_model.dart';
 import '../../gamification/presentation/widgets/level_xp_card.dart';
 import '../../gamification/presentation/leaderboard_screen.dart';
-import '../../character_vote/presentation/character_vote_screen.dart';
 import '../../../shared/widgets/ad_banner_widget.dart';
 import '../../../shared/widgets/bouncy_tap.dart';
 import '../../../shared/widgets/glass_container.dart';
@@ -1082,17 +1081,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             onTap: () => Navigator.push(
                               context,
                               CupertinoPageRoute(builder: (_) => const LeaderboardScreen()),
-                            ),
-                          ),
-                          _buildGlassTile(
-                            icon: CupertinoIcons.heart_fill,
-                            title: 'Vote Karakter Anime',
-                            subtitle: 'Terkuat, Tercantik & Terganteng via Jikan.moe',
-                            isDark: isDark,
-                            showChevron: true,
-                            onTap: () => Navigator.push(
-                              context,
-                              CupertinoPageRoute(builder: (_) => const CharacterVoteScreen()),
                             ),
                           ),
                           _buildGlassTile(

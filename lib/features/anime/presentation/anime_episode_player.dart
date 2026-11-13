@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/cupertino.dart';
@@ -3851,6 +3850,7 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
               final effectiveTitle = (widget.animeTitle != null && widget.animeTitle!.isNotEmpty)
                   ? widget.animeTitle!
                   : title;
+              final curPosSec = _positionNotifier.value.inSeconds.toDouble();
               final res = await ReviewInputDialog.show(
                 context,
                 itemType: 'anime',
@@ -3859,6 +3859,8 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
                 targetCover: widget.animeThumb,
                 subId: widget.episodeId,
                 subTitle: 'Episode $_displayEpisodeNumber',
+                initialMediaUrl: _lastStreamUrl,
+                playbackPosition: curPosSec,
               );
               if (res != null && mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -3904,93 +3906,6 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
                       fontWeight: FontWeight.w600,
                       letterSpacing: -0.2,
                       color: isDark ? Colors.white : const Color(0xFF1C1C1E),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // ── Tombol Klip Anime ke Ulas ──
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () async {
-              HapticFeedback.lightImpact();
-              final auth = context.read<AuthProvider>();
-              if (!auth.isAuthenticated) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Login untuk membuat klip')),
-                );
-                return;
-              }
-              final targetAnimeId = _effectiveAnimeId.isNotEmpty
-                  ? _effectiveAnimeId
-                  : (widget.animeId != null && widget.animeId!.isNotEmpty)
-                      ? widget.animeId!
-                      : widget.episodeId;
-              final effectiveTitle = (widget.animeTitle != null && widget.animeTitle!.isNotEmpty)
-                  ? widget.animeTitle!
-                  : title;
-
-              final curPosSec = _positionNotifier.value.inSeconds.toDouble();
-              final startSec = math.max(0.0, curPosSec - 10.0);
-              final endSec = curPosSec + 20.0;
-
-              final res = await ReviewInputDialog.show(
-                context,
-                itemType: 'anime',
-                targetId: targetAnimeId,
-                targetTitle: effectiveTitle,
-                targetCover: widget.animeThumb,
-                subId: widget.episodeId,
-                subTitle: 'Episode $_displayEpisodeNumber',
-                initialClipStart: startSec,
-                initialClipEnd: endSec,
-                initialMediaUrl: _lastStreamUrl,
-                initialMediaType: 'clip',
-              );
-              if (res != null && mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Klip berhasil dibagikan ke Ulas!'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              }
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7.5),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E1E22) : const Color(0xFFEBEBF0),
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(
-                  color: const Color(0xFFFF2D55).withValues(alpha: 0.35),
-                  width: 0.8,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.06),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    CupertinoIcons.scissors,
-                    size: 14,
-                    color: Color(0xFFFF2D55),
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    'Klip',
-                    style: GoogleFonts.inter(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.2,
-                      color: const Color(0xFFFF2D55),
                     ),
                   ),
                 ],
