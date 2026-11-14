@@ -36,6 +36,7 @@ import '../../reels/presentation/anime_reels_screen.dart';
 import '../../reels/presentation/widgets/anime_reels_tray.dart';
 import '../../../core/services/adult_content_service.dart';
 import '../../jav/presentation/jav_home_screen.dart';
+import '../../gamification/presentation/widgets/daily_xp_streak_banner.dart';
 
 class AnimeHomeScreen extends StatefulWidget {
   const AnimeHomeScreen({super.key});
@@ -1023,6 +1024,11 @@ class _AnimeHomeScreenState extends State<AnimeHomeScreen> {
                   padding: EdgeInsets.only(top: 8, bottom: 4),
                   child: ChatMarqueeBanner(),
                 ),
+              ),
+
+              // Daily XP Claim & 7-Day Streak Banner
+              const SliverToBoxAdapter(
+                child: DailyXpStreakBanner(),
               ),
 
               // Quick Nav Discovery Bar (Clean matching bottom buttons)

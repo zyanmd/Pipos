@@ -23,6 +23,7 @@ import '../../chat/presentation/widgets/chat_marquee_banner.dart';
 import '../../../shared/widgets/ad_banner_widget.dart';
 import '../../notifications/presentation/widgets/universal_notification_button.dart';
 import '../../announcement/presentation/widgets/announcement_banner.dart';
+import '../../gamification/presentation/widgets/daily_xp_streak_banner.dart';
 
 class ComicHomeScreen extends StatefulWidget {
   const ComicHomeScreen({super.key});
@@ -530,6 +531,11 @@ class _ComicHomeScreenState extends State<ComicHomeScreen> {
                   padding: EdgeInsets.only(top: 8, bottom: 4),
                   child: ChatMarqueeBanner(),
                 ),
+              ),
+
+              // Daily XP Claim & 7-Day Streak Banner
+              const SliverToBoxAdapter(
+                child: DailyXpStreakBanner(),
               ),
 
               // Quick Web Novel Gateway

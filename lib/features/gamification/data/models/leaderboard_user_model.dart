@@ -109,6 +109,8 @@ class XpSummaryModel {
   final int totalNextXp;
   final double progress;
   final bool canClaimDaily;
+  final int streakCycleDay;
+  final List<int> streakRewards;
   final List<XpHistoryModel> history;
 
   XpSummaryModel({
@@ -122,6 +124,8 @@ class XpSummaryModel {
     required this.progress,
     required this.canClaimDaily,
     required this.history,
+    this.streakCycleDay = 1,
+    this.streakRewards = const [15, 20, 25, 30, 35, 40, 150],
   });
 
   factory XpSummaryModel.fromJson(Map<String, dynamic> json) {
@@ -133,16 +137,29 @@ class XpSummaryModel {
       }
     }
 
+    final rawStreak = (json['streak'] as num?)?.toInt() ?? 0;
+    final canClaim = json['can_claim_daily'] == true;
+
+    final rawCycleDay = (json['streak_cycle_day'] as num?)?.toInt();
+    final cycleDay = rawCycleDay ?? (canClaim ? (rawStreak % 7) + 1 : ((rawStreak - 1) % 7) + 1);
+
+    final rawRewards = json['streak_rewards'] as List?;
+    final rewards = rawRewards != null
+        ? rawRewards.map((e) => (e as num).toInt()).toList()
+        : const [15, 20, 25, 30, 35, 40, 150];
+
     return XpSummaryModel(
       xp: (json['xp'] as num?)?.toInt() ?? 0,
       level: (json['level'] as num?)?.toInt() ?? 1,
       rank: json['rank']?.toString() ?? 'Ashigaru V',
-      streak: (json['streak'] as num?)?.toInt() ?? 0,
+      streak: rawStreak,
       currentLevelXp: (json['current_level_xp'] as num?)?.toInt() ?? 0,
       nextLevelXp: (json['next_level_xp'] as num?)?.toInt() ?? 100,
       totalNextXp: (json['total_next_xp'] as num?)?.toInt() ?? 100,
       progress: (json['progress'] as num?)?.toDouble() ?? 0.0,
-      canClaimDaily: json['can_claim_daily'] == true,
+      canClaimDaily: canClaim,
+      streakCycleDay: cycleDay.clamp(1, 7),
+      streakRewards: rewards,
       history: hist,
     );
   }
