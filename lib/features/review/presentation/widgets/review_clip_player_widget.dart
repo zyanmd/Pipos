@@ -96,9 +96,19 @@ class _ReviewClipPlayerWidgetState extends State<ReviewClipPlayerWidget> {
         return;
       }
 
+      final lower = streamUrl.toLowerCase();
+      final Map<String, String> headers = {};
+      if (lower.contains('s3.animeverse.id') ||
+          lower.contains('animeverse.id') ||
+          lower.contains('animeverse.')) {
+        headers['Referer'] = 'https://ylnime.com/';
+        headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+      }
+
       final controller = VideoPlayerController.networkUrl(
         Uri.parse(streamUrl),
         videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+        httpHeaders: headers.isNotEmpty ? headers : const {},
       );
 
       await controller.initialize();

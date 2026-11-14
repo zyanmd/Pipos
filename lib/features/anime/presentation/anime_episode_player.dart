@@ -918,14 +918,20 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
   Map<String, String> _getHeadersForUrl(String url) {
     final lower = url.toLowerCase();
 
-    // ⚡ Direct storage / S3 bucket atau direct mp4 (tanpa Referer/Origin agar Cloudflare CDN stream langsung 0ms CORS)
-    if (lower.contains('s3.animeverse.id') ||
-        lower.contains('animeverse.id') ||
-        lower.contains('animeverse.') ||
-        lower.contains('/stream-proxy') ||
-        lower.contains(':2028')) {
+    // ⚡ Proxy VPS stream
+    if (lower.contains('/stream-proxy') || lower.contains(':2028')) {
       return const {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      };
+    }
+
+    // ⚡ Direct storage / S3 bucket animeverse mewajibkan Referer ylnime.com agar tidak 403 Forbidden
+    if (lower.contains('s3.animeverse.id') ||
+        lower.contains('animeverse.id') ||
+        lower.contains('animeverse.')) {
+      return const {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://ylnime.com/',
       };
     }
 
