@@ -892,12 +892,6 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
       return '${ApiConfig.baseUrl}$url';
     }
 
-    // Rute direct S3 CDN via VPS stream-proxy agar Content-Type dipaksa video/mp4 (bukan application/octet-stream)
-    // Ini krusial agar semua resolusi (360p, 480p, 720p, 1080p) dapat diputar di perangkat 32-bit & 64-bit tanpa error.
-    if (url.contains('s3.animeverse.id') && !url.contains('/stream-proxy')) {
-      return '${ApiConfig.apiBase}/ylnime/stream-proxy?url=${Uri.encodeQueryComponent(url)}';
-    }
-
     if (url.contains('pixeldrain.com/u/') || url.contains('pixeldrain.com/l/')) {
       final pixelMatch = RegExp(r'pixeldrain\.com/(?:u|l)/([a-zA-Z0-9_-]+)', caseSensitive: false).firstMatch(url);
       if (pixelMatch != null) {
