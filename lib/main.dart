@@ -28,22 +28,25 @@ import 'shared/widgets/app_network_image.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   AppSecurityShield.verify();
-  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+  if (!kIsWeb) {
+    final isAndroid = Platform.isAndroid;
     fvp.registerWith(
       options: {
-        'platforms': ['windows', 'linux', 'macos'],
-        'video.decoders': ['D3D11', 'DXVA', 'NVDEC', 'FFmpeg'],
+        'platforms': ['android', 'windows', 'linux', 'macos', 'ios'],
+        'video.decoders': isAndroid
+            ? ['AMediaCodec', 'FFmpeg', 'dav1d']
+            : ['D3D11', 'DXVA', 'NVDEC', 'FFmpeg'],
         'player': {
-          'buffer.range': '60000',
-          'demuxer.max_bytes': '104857600',
-          'demuxer.max_back_bytes': '33554432',
+          'buffer.range': isAndroid ? '30000' : '60000',
+          'demuxer.max_bytes': isAndroid ? '33554432' : '104857600',
+          'demuxer.max_back_bytes': isAndroid ? '16777216' : '33554432',
           'avio.buffer_size': '65536',
           'avio.reconnect': '1',
           'avio.reconnect_streamed': '1',
           'avio.reconnect_delay_max': '7',
         },
         'global': {
-          'demuxer.max_bytes': 104857600,
+          'demuxer.max_bytes': isAndroid ? 33554432 : 104857600,
         },
       },
     );
