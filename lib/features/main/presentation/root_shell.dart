@@ -1,16 +1,21 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../core/services/deep_link_service.dart';
 import '../../../core/services/pip_service.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../shared/providers/auth_provider.dart';
+import '../../../shared/providers/theme_provider.dart';
 import '../../../shared/widgets/desktop_sidebar.dart';
 import '../../../shared/widgets/ios_bottom_nav_bar.dart';
+import '../../anime/presentation/anime_search_screen.dart';
 import '../../auth/presentation/welcome_screen.dart';
 import '../../anime/presentation/anime_home_screen.dart';
 import '../../comic/presentation/comic_home_screen.dart';
 import '../../review/presentation/review_home_screen.dart';
 import '../../profile/presentation/profile_screen.dart';
+import '../../profile/presentation/settings_screen.dart';
 import '../../update/services/app_update_service.dart';
 
 /// Main shell with floating floating bubble bottom navigation.
@@ -156,21 +161,44 @@ class _RootShellState extends State<RootShell> {
           final isDesktop = Responsive.isDesktop(context);
 
           if (isDesktop) {
-            return Scaffold(
-              body: Row(
-                children: [
-                  DesktopSidebar(
-                    currentIndex: _currentIndex,
-                    onTap: _onTab,
+            return CallbackShortcuts(
+              bindings: {
+                const SingleActivator(LogicalKeyboardKey.keyK, control: true): () {
+                  Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const AnimeSearchScreen()));
+                },
+                const SingleActivator(LogicalKeyboardKey.keyF, control: true): () {
+                  Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const AnimeSearchScreen()));
+                },
+                const SingleActivator(LogicalKeyboardKey.digit1, control: true): () => _onTab(0),
+                const SingleActivator(LogicalKeyboardKey.digit2, control: true): () => _onTab(1),
+                const SingleActivator(LogicalKeyboardKey.digit3, control: true): () => _onTab(2),
+                const SingleActivator(LogicalKeyboardKey.digit4, control: true): () => _onTab(3),
+                const SingleActivator(LogicalKeyboardKey.keyD, control: true): () {
+                  context.read<ThemeProvider>().toggle();
+                },
+                const SingleActivator(LogicalKeyboardKey.comma, control: true): () {
+                  Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const SettingsScreen()));
+                },
+              },
+              child: Focus(
+                autofocus: true,
+                child: Scaffold(
+                  body: Row(
+                    children: [
+                      DesktopSidebar(
+                        currentIndex: _currentIndex,
+                        onTap: _onTab,
+                      ),
+                      Expanded(
+                        child: Stack(
+                          children: [
+                            _buildPagesStack(),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  Expanded(
-                    child: Stack(
-                      children: [
-                        _buildPagesStack(),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
             );
           }

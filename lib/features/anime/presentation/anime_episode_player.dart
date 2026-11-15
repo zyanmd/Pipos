@@ -211,6 +211,7 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
   bool _wasPlayingBeforeHold = false;
 
   final ScrollController _horizontalEpisodeScrollCtrl = ScrollController();
+  String _desktopEpisodeFilter = '';
 
   void _scrollToCurrentEpisode() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -2604,10 +2605,11 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
                       Expanded(
                         child: Column(
                           children: [
+                            _buildDesktopTopBar(isDark),
                             Container(
                               color: Colors.black,
                               constraints: BoxConstraints(
-                                maxHeight: constraints.maxHeight * 0.65,
+                                maxHeight: (constraints.maxHeight - 48) * 0.65,
                               ),
                               child: Center(
                                 child: AspectRatio(
@@ -4797,10 +4799,155 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
   }
 
 
-  // ─── DESKTOP EPISODE SIDEBAR ──────────────────────────────────────────
+  // ─── DESKTOP TOP BAR & EPISODE SIDEBAR ──────────────────────────────────
+
+  Widget _buildDesktopTopBar(bool isDark) {
+    final title = widget.animeTitle ?? _ylnimeStream?.seriesName ?? 'Anime';
+    final epLabel = 'Episode $_displayEpisodeNumber';
+
+    return Container(
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF131317) : Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? const Color(0x1FFFFFFF) : const Color(0x0F000000),
+            width: 0.5,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Back Button
+          Tooltip(
+            message: 'Kembali (Esc)',
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () {
+                _pausePlayer();
+                Navigator.maybePop(context);
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      CupertinoIcons.chevron_back,
+                      size: 18,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Kembali',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            height: 16,
+            width: 1,
+            color: isDark ? Colors.white24 : Colors.black26,
+          ),
+          const SizedBox(width: 12),
+          // Breadcrumb Title
+          Expanded(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white70 : Colors.black87,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Icon(
+                    CupertinoIcons.chevron_right,
+                    size: 11,
+                    color: isDark ? Colors.white38 : Colors.black38,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    epLabel,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : Colors.black,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Actions: Prev, Next, Fullscreen
+          if (_hasPrevEpisode)
+            Tooltip(
+              message: 'Episode Sebelumnya',
+              child: IconButton(
+                icon: const Icon(CupertinoIcons.backward_fill, size: 16),
+                color: isDark ? Colors.white70 : Colors.black87,
+                onPressed: _prevEpisode,
+                splashRadius: 18,
+              ),
+            ),
+          if (_hasNextEpisode)
+            Tooltip(
+              message: 'Episode Selanjutnya',
+              child: IconButton(
+                icon: const Icon(CupertinoIcons.forward_fill, size: 16),
+                color: isDark ? Colors.white70 : Colors.black87,
+                onPressed: _nextEpisode,
+                splashRadius: 18,
+              ),
+            ),
+          Tooltip(
+            message: _isFullscreen ? 'Keluar Layar Penuh (F / Esc)' : 'Layar Penuh (F)',
+            child: IconButton(
+              icon: Icon(
+                _isFullscreen ? CupertinoIcons.fullscreen_exit : CupertinoIcons.fullscreen,
+                size: 18,
+              ),
+              color: isDark ? Colors.white70 : Colors.black87,
+              onPressed: _toggleFullScreen,
+              splashRadius: 18,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildDesktopEpisodeSidebar(bool isDark) {
     final hairlineColor = isDark ? const Color(0x1FFFFFFF) : const Color(0x0F000000);
+
+    final filteredEpisodes = _desktopEpisodeFilter.isEmpty
+        ? _episodes
+        : _episodes
+            .where((e) => e.label.toLowerCase().contains(_desktopEpisodeFilter))
+            .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -4865,6 +5012,64 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
             ],
           ),
         ),
+
+        // Episode Search Box (If anime has more than 6 episodes)
+        if (_episodes.length > 6) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+            child: Container(
+              height: 34,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              decoration: BoxDecoration(
+                color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: hairlineColor,
+                  width: 0.5,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    CupertinoIcons.search,
+                    size: 14,
+                    color: isDark ? Colors.white38 : Colors.black38,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      onChanged: (val) => setState(() => _desktopEpisodeFilter = val.trim().toLowerCase()),
+                      style: GoogleFonts.inter(
+                        fontSize: 12.5,
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Cari nomor / judul episode...',
+                        hintStyle: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: isDark ? Colors.white38 : Colors.black38,
+                        ),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ),
+                  if (_desktopEpisodeFilter.isNotEmpty)
+                    GestureDetector(
+                      onTap: () => setState(() => _desktopEpisodeFilter = ''),
+                      child: Icon(
+                        CupertinoIcons.clear_circled_solid,
+                        size: 14,
+                        color: isDark ? Colors.white38 : Colors.black38,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+
         Divider(height: 1, thickness: 0.5, color: hairlineColor),
 
         // Episode List
@@ -4886,10 +5091,10 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
                     ],
                   ),
                 )
-              : _episodes.isEmpty
+              : filteredEpisodes.isEmpty
                   ? Center(
                       child: Text(
-                        'Tidak ada episode',
+                        _episodes.isEmpty ? 'Tidak ada episode' : 'Episode tidak ditemukan',
                         style: GoogleFonts.inter(
                           fontSize: 13,
                           color: isDark ? Colors.white54 : Colors.black54,
@@ -4902,84 +5107,89 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
                       addAutomaticKeepAlives: false,
                       addRepaintBoundaries: true,
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      itemCount: _episodes.length,
+                      itemCount: filteredEpisodes.length,
                       separatorBuilder: (_, __) => Divider(height: 1, thickness: 0.5, color: hairlineColor),
                       itemBuilder: (ctx, idx) {
-                        final ep = _episodes[idx];
+                        final ep = filteredEpisodes[idx];
                         final isSelected = _currentEpisodeId == ep.id;
+                        final originalIndex = _episodes.indexOf(ep);
+
                         return RepaintBoundary(
                           child: InkWell(
-                            onTap: () => _playEpisode(ep, idx),
+                            onTap: () => _playEpisode(ep, originalIndex != -1 ? originalIndex : idx),
+                            hoverColor: isDark
+                                ? Colors.white.withValues(alpha: 0.06)
+                                : Colors.black.withValues(alpha: 0.04),
                             borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? (isDark ? Colors.white.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.08))
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(10),
-                              border: isSelected
-                                  ? Border.all(color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6), width: 1)
-                                  : null,
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 32,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? (isDark ? Colors.white : Colors.black)
-                                        : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: isSelected
-                                      ? Icon(CupertinoIcons.play_fill, color: isDark ? Colors.black : Colors.white, size: 14)
-                                      : Text(
-                                          '${idx + 1}',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w700,
-                                            color: isDark ? Colors.white70 : Colors.black87,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? (isDark ? Colors.white.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.08))
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(10),
+                                border: isSelected
+                                    ? Border.all(color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.6), width: 1)
+                                    : null,
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? (isDark ? Colors.white : Colors.black)
+                                          : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: isSelected
+                                        ? Icon(CupertinoIcons.play_fill, color: isDark ? Colors.black : Colors.white, size: 14)
+                                        : Text(
+                                            '${originalIndex != -1 ? originalIndex + 1 : idx + 1}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                              color: isDark ? Colors.white70 : Colors.black87,
+                                            ),
                                           ),
-                                        ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        ep.label,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                          color: isSelected
-                                              ? (isDark ? Colors.white : Colors.black)
-                                              : (isDark ? Colors.white : const Color(0xFF1C1C1E)),
-                                        ),
-                                      ),
-                                      if (isSelected)
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
                                         Text(
-                                          'Sedang Diputar',
+                                          ep.label,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                           style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                            color: isDark ? Colors.white70 : Colors.black87,
+                                            fontSize: 13,
+                                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                            color: isSelected
+                                                ? (isDark ? Colors.white : Colors.black)
+                                                : (isDark ? Colors.white : const Color(0xFF1C1C1E)),
                                           ),
                                         ),
-                                    ],
+                                        if (isSelected)
+                                          Text(
+                                            'Sedang Diputar',
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w600,
+                                              color: isDark ? Colors.white70 : Colors.black87,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
                     ),
         ),
       ],

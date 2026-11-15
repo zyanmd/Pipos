@@ -8,6 +8,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/deep_link_service.dart';
 import '../../../core/services/pip_service.dart';
+import '../../../core/utils/responsive.dart';
 import '../../../shared/widgets/cinematic_fullscreen_hud.dart';
 import '../../anime/presentation/widgets/anime_player_custom_controls.dart';
 import '../data/models/zpic_model.dart';
@@ -474,21 +475,26 @@ class _ZpicPlayerScreenState extends State<ZpicPlayerScreen>
             ),
           ),
           body: SafeArea(
-            child: Column(
-              children: [
-                // Video Player Container (Dynamic Aspect Ratio for Portrait/Landscape)
-                AspectRatio(
-                  aspectRatio: _isPortraitVideo
-                      ? (_videoPlayerController?.value.aspectRatio ?? 9 / 16).clamp(0.5, 0.95)
-                      : 16 / 9,
-                  child: _buildPlayerContent(isDark),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: Responsive.isDesktop(context) ? 1200 : double.infinity,
                 ),
+                child: Column(
+                  children: [
+                    // Video Player Container (Dynamic Aspect Ratio for Portrait/Landscape)
+                    AspectRatio(
+                      aspectRatio: _isPortraitVideo
+                          ? (_videoPlayerController?.value.aspectRatio ?? 9 / 16).clamp(0.5, 0.95)
+                          : 16 / 9,
+                      child: _buildPlayerContent(isDark),
+                    ),
 
-                // Video Details & Controls
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
+                    // Video Details & Controls
+                    Expanded(
+                      child: ListView(
+                        padding: const EdgeInsets.all(16),
+                        children: [
                   // Title & Meta
                   Text(
                     _currentVideo.title.isNotEmpty ? _currentVideo.title : 'Untitled Video',
@@ -717,7 +723,9 @@ class _ZpicPlayerScreenState extends State<ZpicPlayerScreen>
           ],
         ),
       ),
-        );
+    ),
+  ),
+);
 
         return CallbackShortcuts(
           bindings: {

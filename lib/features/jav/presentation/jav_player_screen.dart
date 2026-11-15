@@ -10,6 +10,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/services/adult_content_service.dart';
 import '../../../core/services/deep_link_service.dart';
 import '../../../core/services/pip_service.dart';
+import '../../../core/utils/responsive.dart';
 import '../../../shared/widgets/bouncy_tap.dart';
 import '../../anime/presentation/widgets/anime_player_custom_controls.dart';
 import '../data/models/jav_model.dart';
@@ -412,22 +413,41 @@ class _JavPlayerScreenState extends State<JavPlayerScreen>
                 body: SafeArea(
                   top: true,
                   bottom: false,
-                  child: Column(
-                    children: [
-                      // Video Player Box (Anime Style Controls, Adaptive Portrait/Landscape Aspect Ratio)
-                      AspectRatio(
-                        aspectRatio: _isPortraitVideo
-                            ? (_videoPlayerController?.value.aspectRatio ?? 9 / 16).clamp(0.5, 0.95)
-                            : 16 / 9,
-                        child: _buildPlayerContent(isDark, isFs: false),
-                      ),
+                  child: Responsive.isDesktop(context)
+                      ? Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 1200),
+                            child: Column(
+                              children: [
+                                AspectRatio(
+                                  aspectRatio: _isPortraitVideo
+                                      ? (_videoPlayerController?.value.aspectRatio ?? 9 / 16).clamp(0.5, 0.95)
+                                      : 16 / 9,
+                                  child: _buildPlayerContent(isDark, isFs: false),
+                                ),
+                                Expanded(
+                                  child: _buildDetailsList(isDark),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : Column(
+                          children: [
+                            // Video Player Box (Anime Style Controls, Adaptive Portrait/Landscape Aspect Ratio)
+                            AspectRatio(
+                              aspectRatio: _isPortraitVideo
+                                  ? (_videoPlayerController?.value.aspectRatio ?? 9 / 16).clamp(0.5, 0.95)
+                                  : 16 / 9,
+                              child: _buildPlayerContent(isDark, isFs: false),
+                            ),
 
-                      // Video Details, Meta & Related
-                      Expanded(
-                        child: _buildDetailsList(isDark),
-                      ),
-                    ],
-                  ),
+                            // Video Details, Meta & Related
+                            Expanded(
+                              child: _buildDetailsList(isDark),
+                            ),
+                          ],
+                        ),
                 ),
               );
 

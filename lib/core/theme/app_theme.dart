@@ -152,6 +152,20 @@ class AppTheme {
         thickness: 0.5,
         space: 1,
       ),
+      scrollbarTheme: ScrollbarThemeData(
+        thumbVisibility: const WidgetStatePropertyAll(true),
+        thickness: const WidgetStatePropertyAll(7.0),
+        radius: const Radius.circular(8.0),
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.dragged)) {
+            return const Color(0x99000000);
+          }
+          if (states.contains(WidgetState.hovered)) {
+            return const Color(0x66000000);
+          }
+          return const Color(0x28000000);
+        }),
+      ),
       pageTransitionsTheme: _buildPageTransitionsTheme(animationsEnabled),
     );
   }
@@ -292,6 +306,20 @@ class AppTheme {
         color: AppColors.darkDivider,
         thickness: 0.5,
         space: 1,
+      ),
+      scrollbarTheme: ScrollbarThemeData(
+        thumbVisibility: const WidgetStatePropertyAll(true),
+        thickness: const WidgetStatePropertyAll(7.0),
+        radius: const Radius.circular(8.0),
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.dragged)) {
+            return const Color(0xB3FFFFFF);
+          }
+          if (states.contains(WidgetState.hovered)) {
+            return const Color(0x80FFFFFF);
+          }
+          return const Color(0x33FFFFFF);
+        }),
       ),
       pageTransitionsTheme: _buildPageTransitionsTheme(animationsEnabled),
     );
