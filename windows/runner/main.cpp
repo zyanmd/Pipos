@@ -25,14 +25,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 
   FlutterWindow window(project);
-  int screen_width = GetSystemMetrics(SM_CXSCREEN);
-  int screen_height = GetSystemMetrics(SM_CYSCREEN);
-  int window_width = 1280;
-  int window_height = 768;
-  int origin_x = (screen_width > window_width) ? ((screen_width - window_width) / 2) : 20;
-  int origin_y = (screen_height > window_height) ? ((screen_height - window_height) / 2) : 20;
-  Win32Window::Point origin(origin_x, origin_y);
-  Win32Window::Size size(window_width, window_height);
+  Win32Window::Point origin(10, 10);
+  Win32Window::Size size(1280, 720);
   if (!window.Create(L"MOKO", origin, size)) {
     return EXIT_FAILURE;
   }

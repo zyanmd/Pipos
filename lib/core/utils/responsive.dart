@@ -11,9 +11,9 @@ class Responsive {
   static const double desktopMinWidth = 900.0;
   static const double wideDesktopMinWidth = 1400.0;
 
-  /// Content max width for desktop readable layout (optimized for 1080p+ widescreen monitors)
-  static const double maxContentWidth = 1560.0;
-  static const double maxProfileWidth = 980.0;
+  /// Content max width for desktop readable layout
+  static const double maxContentWidth = 1280.0;
+  static const double maxProfileWidth = 920.0;
 
   /// True when the available screen width qualifies as a desktop/large screen
   static bool isDesktop(BuildContext context) {
