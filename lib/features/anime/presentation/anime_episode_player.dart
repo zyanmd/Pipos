@@ -1120,10 +1120,10 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
         oldVp.removeListener(_onVideoPlayerUpdate);
       } catch (_) {}
       try {
-        await oldVp.pause();
+        await oldVp.pause().timeout(const Duration(milliseconds: 400), onTimeout: () {});
       } catch (_) {}
       try {
-        await oldVp.dispose();
+        await oldVp.dispose().timeout(const Duration(milliseconds: 800), onTimeout: () {});
       } catch (_) {}
     }
   }

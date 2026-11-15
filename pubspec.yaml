@@ -1,7 +1,7 @@
 name: moko
 description: Moko - streaming anime & reading comics.
 publish_to: 'none'
-version: 1.2.5+2065
+version: 1.2.6+2066
 
 environment:
   sdk: '>=3.3.0 <4.0.0'

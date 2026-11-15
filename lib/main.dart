@@ -1,3 +1,4 @@
+import 'dart:ffi' show IntPtr, sizeOf;
 import 'dart:io' show Platform;
 import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter/cupertino.dart';
@@ -30,23 +31,25 @@ void main() async {
   AppSecurityShield.verify();
   if (!kIsWeb) {
     final isAndroid = Platform.isAndroid;
+    final is32Bit = sizeOf<IntPtr>() == 4;
+
     fvp.registerWith(
       options: {
         'platforms': ['android', 'windows', 'linux', 'macos', 'ios'],
         'video.decoders': isAndroid
-            ? ['AMediaCodec', 'FFmpeg', 'dav1d']
-            : ['D3D11', 'DXVA', 'NVDEC', 'FFmpeg'],
+            ? (is32Bit ? ['FFmpeg'] : ['AMediaCodec', 'FFmpeg'])
+            : ['D3D11', 'DXVA', 'CUDA', 'FFmpeg'],
         'player': {
-          'buffer.range': isAndroid ? '30000' : '60000',
-          'demuxer.max_bytes': isAndroid ? '33554432' : '104857600',
-          'demuxer.max_back_bytes': isAndroid ? '16777216' : '33554432',
+          'buffer.range': isAndroid ? (is32Bit ? '15000' : '30000') : '60000',
+          'demuxer.max_bytes': isAndroid ? (is32Bit ? '16777216' : '33554432') : '104857600',
+          'demuxer.max_back_bytes': isAndroid ? (is32Bit ? '8388608' : '16777216') : '33554432',
           'avio.buffer_size': '65536',
           'avio.reconnect': '1',
           'avio.reconnect_streamed': '1',
           'avio.reconnect_delay_max': '7',
         },
         'global': {
-          'demuxer.max_bytes': isAndroid ? 33554432 : 104857600,
+          'demuxer.max_bytes': isAndroid ? (is32Bit ? 16777216 : 33554432) : 104857600,
         },
       },
     );
