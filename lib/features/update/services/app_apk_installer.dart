@@ -27,6 +27,12 @@ class AppApkInstaller {
   /// Check if the platform is Android
   bool get isAndroid => !kIsWeb && Platform.isAndroid;
 
+  /// Check if the platform is Windows
+  bool get isWindows => !kIsWeb && Platform.isWindows;
+
+  /// Check if platform supports in-app OTA installer
+  bool get isSupported => isAndroid || isWindows;
+
   /// Get supported ABIs from Android (e.g. ['arm64-v8a', 'armeabi-v7a'])
   Future<List<String>> getSupportedAbis() async {
     if (!isAndroid) return [];
@@ -61,6 +67,23 @@ class AppApkInstaller {
     }
   }
 
+  /// Install downloaded package file (APK on Android, Setup EXE on Windows)
+  Future<bool> installPackage(String filePath) async {
+    if (isWindows) {
+      try {
+        await Process.start(filePath, [], runInShell: true, mode: ProcessStartMode.detached);
+        return true;
+      } catch (e) {
+        debugPrint('[AppApkInstaller] Windows install error: $e');
+        return false;
+      }
+    }
+    if (isAndroid) {
+      return installApk(filePath);
+    }
+    return false;
+  }
+
   /// Install downloaded APK file via native Android PackageInstaller
   Future<bool> installApk(String filePath) async {
     if (!isAndroid) return false;
@@ -75,13 +98,15 @@ class AppApkInstaller {
     }
   }
 
-  /// Resolves the direct APK download URL.
+  /// Resolves the direct download URL (APK for Android, EXE setup for Windows).
   /// 
-  /// If [url] is already a direct `.apk` URL, returns it immediately.
-  /// If [url] is a GitHub release page, queries the GitHub API to find the best
-  /// APK asset matching the device's CPU architecture (e.g. arm64-v8a vs armeabi-v7a).
+  /// If [url] is already a direct installer URL, returns it immediately.
+  /// If [url] is a GitHub release page, queries the GitHub API to find the best asset.
   Future<String> resolveDirectApkUrl(String url) async {
     final cleanUrl = url.trim();
+    if (isWindows && cleanUrl.toLowerCase().endsWith('.exe')) {
+      return cleanUrl;
+    }
     if (cleanUrl.toLowerCase().endsWith('.apk')) {
       return cleanUrl;
     }
@@ -105,10 +130,20 @@ class AppApkInstaller {
         if (resp.statusCode == 200 && resp.data != null) {
           final assets = resp.data!['assets'] as List<dynamic>?;
           if (assets != null && assets.isNotEmpty) {
-            final abis = await getSupportedAbis();
-            final directUrl = _selectBestApkAsset(assets, abis);
-            if (directUrl != null && directUrl.isNotEmpty) {
-              return directUrl;
+            if (isWindows) {
+              final exeAsset = assets.firstWhere(
+                (a) => (a['name']?.toString() ?? '').toLowerCase().endsWith('.exe'),
+                orElse: () => null,
+              );
+              if (exeAsset != null && exeAsset['browser_download_url'] != null) {
+                return exeAsset['browser_download_url'].toString();
+              }
+            } else {
+              final abis = await getSupportedAbis();
+              final directUrl = _selectBestApkAsset(assets, abis);
+              if (directUrl != null && directUrl.isNotEmpty) {
+                return directUrl;
+              }
             }
           }
         }
@@ -153,22 +188,23 @@ class AppApkInstaller {
     return apkAssets.first['browser_download_url']?.toString();
   }
 
-  /// Downloads the APK to temporary directory with progress tracking.
+  /// Downloads the installer (APK on Android, Setup EXE on Windows) to temporary directory.
   Future<String> downloadApk({
     required String downloadUrl,
     required void Function(int receivedBytes, int totalBytes) onProgress,
     CancelToken? cancelToken,
   }) async {
     final tempDir = await getTemporaryDirectory();
-    final fileName = 'moko_update_${DateTime.now().millisecondsSinceEpoch}.apk';
+    final ext = isWindows ? 'exe' : 'apk';
+    final fileName = 'moko_update_${DateTime.now().millisecondsSinceEpoch}.$ext';
     final savePath = '${tempDir.path}/$fileName';
 
-    // Delete existing stale APK files from tempDir
+    // Delete existing stale installer files from tempDir
     try {
       final dir = Directory(tempDir.path);
       final files = dir.listSync();
       for (final f in files) {
-        if (f is File && f.path.contains('moko_update') && f.path.endsWith('.apk')) {
+        if (f is File && f.path.contains('moko_update') && (f.path.endsWith('.apk') || f.path.endsWith('.exe'))) {
           try {
             f.deleteSync();
           } catch (_) {}

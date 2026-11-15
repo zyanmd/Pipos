@@ -94,7 +94,7 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
   }
 
   Future<void> _startInAppUpdate() async {
-    if (!AppApkInstaller.instance.isAndroid) {
+    if (!AppApkInstaller.instance.isSupported) {
       _launchUpdateUrl(context);
       return;
     }
@@ -171,6 +171,14 @@ class _AppUpdateDialogState extends State<AppUpdateDialog> {
   }
 
   Future<void> _triggerInstall(String filePath) async {
+    if (AppApkInstaller.instance.isWindows) {
+      final success = await AppApkInstaller.instance.installPackage(filePath);
+      if (success && mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+      return;
+    }
+
     final canInstall = await AppApkInstaller.instance.canRequestPackageInstalls();
     if (!canInstall && mounted) {
       final shouldOpenSettings = await showDialog<bool>(

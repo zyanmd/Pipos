@@ -9,7 +9,7 @@ class AppUpdateService {
   static final AppUpdateService instance = AppUpdateService._();
 
   static const String currentVersion = '1.2.5';
-  static const int currentBuildNumber = 2063;
+  static const int currentBuildNumber = 2065;
 
   /// Notifier untuk update yang tersedia (agar UI profil & navbar dapat merespons tanpa pop-up)
   final ValueNotifier<AppUpdateModel?> availableUpdateNotifier = ValueNotifier<AppUpdateModel?>(null);
@@ -120,24 +120,31 @@ class AppUpdateService {
     return backendModel;
   }
 
+  /// Normalizes a version string by stripping 'v'/'V', build metadata, and whitespace.
+  static String normalizeVersion(String v) {
+    var s = v.trim();
+    if (s.startsWith('v') || s.startsWith('V')) {
+      s = s.substring(1).trim();
+    }
+    if (s.contains('+')) {
+      s = s.split('+').first.trim();
+    }
+    return s;
+  }
+
   /// Check if remote version is newer than current version.
-  /// If current version is already higher than remote or equal, no update needed.
+  /// If current version is already higher than remote or EQUAL, NO UPDATE NEEDED!
   static bool isUpdateAvailable(AppUpdateModel remote) {
-    // 1. If current version is strictly higher than remote, no update needed
-    if (isVersionHigher(currentVersion, remote.version)) {
+    final vRemote = normalizeVersion(remote.version);
+    final vCurrent = normalizeVersion(currentVersion);
+
+    // Aturan pengguna: Kalau versi sudah sama, jangan ada update lagi!
+    if (vRemote == vCurrent) {
       return false;
     }
-    // 2. If remote version is strictly higher than current version, update is available
-    if (isVersionHigher(remote.version, currentVersion)) {
-      return true;
-    }
-    // 3. If version strings are equal (e.g. both 1.1.0):
-    // Only available if remote build number is strictly higher than current build number
-    if (remote.buildNumber > currentBuildNumber) {
-      return true;
-    }
-    // Same version and same/lower build number -> NO UPDATE
-    return false;
+
+    // Hanya ada update jika versi remote secara hierarkis lebih tinggi dari versi saat ini
+    return isVersionHigher(vRemote, vCurrent);
   }
 
   /// Whether an update must be enforced (blocking popup).
@@ -151,13 +158,17 @@ class AppUpdateService {
   static bool isUpdateMandatory(AppUpdateModel remote, {bool isManual = false}) {
     if (isManual) return false;
 
+    final vRemote = normalizeVersion(remote.version);
+    final vCurrent = normalizeVersion(currentVersion);
+
     // SAMA VERSI / LEBIH TINGGI -> JANGAN PERNAH PAKSA UPDATE!
-    if (!isVersionHigher(remote.version, currentVersion)) {
+    if (vRemote == vCurrent || !isVersionHigher(vRemote, vCurrent)) {
       return false;
     }
 
     if (remote.minimumVersion != null && remote.minimumVersion!.isNotEmpty) {
-      if (isVersionHigher(remote.minimumVersion!, currentVersion)) {
+      final vMin = normalizeVersion(remote.minimumVersion!);
+      if (isVersionHigher(vMin, vCurrent)) {
         return true;
       }
     }
