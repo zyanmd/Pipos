@@ -1,3 +1,5 @@
+import 'dart:io' show Platform, Process, ProcessStartMode, exit, File;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -294,6 +296,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       CupertinoPageRoute(builder: (_) => const PrivacyPolicyScreen()),
                     ),
                   ),
+                  if (!kIsWeb && Platform.isWindows) ...[
+                    _buildDivider(isDark),
+                    _buildSettingTile(
+                      icon: CupertinoIcons.trash_fill,
+                      iconBg: const Color(0xFFFF3B30),
+                      title: 'Uninstall Moko',
+                      subtitle: 'Hapus pemasangan aplikasi dari komputer ini',
+                      titleColor: const Color(0xFFFF3B30),
+                      isDark: isDark,
+                      onTap: () => _confirmUninstallWindows(context),
+                    ),
+                  ],
                 ],
               ),
 
@@ -507,6 +521,71 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  void _confirmUninstallWindows(BuildContext context) {
+    showCupertinoDialog(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: const Text('Uninstall Moko'),
+        content: const Padding(
+          padding: EdgeInsets.only(top: 8),
+          child: Text(
+            'Apakah Anda yakin ingin mencopot pemasangan (uninstall) aplikasi Moko dari komputer ini?',
+          ),
+        ),
+        actions: [
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            child: const Text('Batal'),
+            onPressed: () => Navigator.pop(ctx),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            child: const Text('Uninstall'),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await _launchWindowsUninstaller(context);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _launchWindowsUninstaller(BuildContext context) async {
+    try {
+      final exeDir = File(Platform.resolvedExecutable).parent.path;
+      final uninsPath = '$exeDir\\unins000.exe';
+      final uninsFile = File(uninsPath);
+
+      if (await uninsFile.exists()) {
+        await Process.start(
+          uninsPath,
+          [],
+          mode: ProcessStartMode.detached,
+        );
+        exit(0);
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              behavior: SnackBarBehavior.floating,
+              content: Text('File uninstaller (unins000.exe) tidak ditemukan di folder instalasi.'),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text('Gagal menjalankan uninstaller: $e'),
+          ),
+        );
+      }
+    }
   }
 
   void _showThemePicker(bool isDark) {
