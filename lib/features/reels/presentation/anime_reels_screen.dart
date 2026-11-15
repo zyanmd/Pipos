@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
@@ -90,9 +91,9 @@ class _AnimeReelsScreenState extends State<AnimeReelsScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (defaultTargetPlatform == TargetPlatform.windows) return;
     if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.hidden ||
-        state == AppLifecycleState.inactive) {
+        state == AppLifecycleState.hidden) {
       if (mounted && !_isAppInBackground) {
         setState(() => _isAppInBackground = true);
       }

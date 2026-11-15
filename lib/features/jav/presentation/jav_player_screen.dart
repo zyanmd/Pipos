@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
@@ -68,9 +69,9 @@ class _JavPlayerScreenState extends State<JavPlayerScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (defaultTargetPlatform == TargetPlatform.windows) return;
     if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.hidden ||
-        state == AppLifecycleState.inactive) {
+        state == AppLifecycleState.hidden) {
       _onPausePlayer();
     }
   }
@@ -288,6 +289,50 @@ class _JavPlayerScreenState extends State<JavPlayerScreen>
     _loadVideoDetailAndPlay();
   }
 
+  double _lastVolume = 1.0;
+
+  void _togglePlayPause() {
+    final c = _videoPlayerController;
+    if (c == null || !c.value.isInitialized) return;
+    if (c.value.isPlaying) {
+      c.pause();
+    } else {
+      c.play();
+    }
+    _syncPipState();
+  }
+
+  void _seekRelative(int seconds) {
+    final c = _videoPlayerController;
+    if (c == null || !c.value.isInitialized) return;
+    final current = c.value.position;
+    final total = c.value.duration;
+    var target = current + Duration(seconds: seconds);
+    if (target < Duration.zero) target = Duration.zero;
+    if (total > Duration.zero && target > total) target = total;
+    c.seekTo(target);
+  }
+
+  void _changeVolume(double delta) {
+    final c = _videoPlayerController;
+    if (c == null || !c.value.isInitialized) return;
+    final current = c.value.volume;
+    final next = (current + delta).clamp(0.0, 1.0);
+    c.setVolume(next);
+    if (next > 0) _lastVolume = next;
+  }
+
+  void _toggleMute() {
+    final c = _videoPlayerController;
+    if (c == null || !c.value.isInitialized) return;
+    if (c.value.volume > 0.0) {
+      _lastVolume = c.value.volume;
+      c.setVolume(0.0);
+    } else {
+      c.setVolume(_lastVolume > 0 ? _lastVolume : 1.0);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!AdultContentService.instance.is18Unlocked) {
@@ -350,19 +395,8 @@ class _JavPlayerScreenState extends State<JavPlayerScreen>
         final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
         final isFullscreenActive = isLandscape || _isFullscreen;
 
-        if (isFullscreenActive) {
-          return CallbackShortcuts(
-            bindings: {
-              const SingleActivator(LogicalKeyboardKey.escape): () {
-                if (_isFullscreen) _exitFullscreen();
-              },
-              const SingleActivator(LogicalKeyboardKey.keyF): () {
-                _toggleFullscreen();
-              },
-            },
-            child: Focus(
-              autofocus: true,
-              child: Scaffold(
+        final Widget bodyWidget = isFullscreenActive
+            ? Scaffold(
                 backgroundColor: Colors.black,
                 body: PopScope(
                   canPop: false,
@@ -372,32 +406,70 @@ class _JavPlayerScreenState extends State<JavPlayerScreen>
                   },
                   child: _buildPlayerContent(isDark, isFs: true),
                 ),
-              ),
-            ),
-          );
-        }
+              )
+            : Scaffold(
+                backgroundColor: bg,
+                body: SafeArea(
+                  top: true,
+                  bottom: false,
+                  child: Column(
+                    children: [
+                      // Video Player Box (Anime Style Controls, Adaptive Portrait/Landscape Aspect Ratio)
+                      AspectRatio(
+                        aspectRatio: _isPortraitVideo
+                            ? (_videoPlayerController?.value.aspectRatio ?? 9 / 16).clamp(0.5, 0.95)
+                            : 16 / 9,
+                        child: _buildPlayerContent(isDark, isFs: false),
+                      ),
 
-        return Scaffold(
-          backgroundColor: bg,
-          body: SafeArea(
-            top: true,
-            bottom: false,
-            child: Column(
-              children: [
-                // Video Player Box (Anime Style Controls, Adaptive Portrait/Landscape Aspect Ratio)
-                AspectRatio(
-                  aspectRatio: _isPortraitVideo
-                      ? (_videoPlayerController?.value.aspectRatio ?? 9 / 16).clamp(0.5, 0.95)
-                      : 16 / 9,
-                  child: _buildPlayerContent(isDark, isFs: false),
+                      // Video Details, Meta & Related
+                      Expanded(
+                        child: _buildDetailsList(isDark),
+                      ),
+                    ],
+                  ),
                 ),
+              );
 
-                // Video Details, Meta & Related
-                Expanded(
-                  child: _buildDetailsList(isDark),
-                ),
-              ],
-            ),
+        return CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.escape): () {
+              if (_isFullscreen) _exitFullscreen();
+            },
+            const SingleActivator(LogicalKeyboardKey.keyF): () {
+              _toggleFullscreen();
+            },
+            const SingleActivator(LogicalKeyboardKey.space): () {
+              _togglePlayPause();
+            },
+            const SingleActivator(LogicalKeyboardKey.keyK): () {
+              _togglePlayPause();
+            },
+            const SingleActivator(LogicalKeyboardKey.arrowLeft): () {
+              _seekRelative(-10);
+            },
+            const SingleActivator(LogicalKeyboardKey.keyJ): () {
+              _seekRelative(-10);
+            },
+            const SingleActivator(LogicalKeyboardKey.arrowRight): () {
+              _seekRelative(10);
+            },
+            const SingleActivator(LogicalKeyboardKey.keyL): () {
+              _seekRelative(10);
+            },
+            const SingleActivator(LogicalKeyboardKey.arrowUp): () {
+              _changeVolume(0.1);
+            },
+            const SingleActivator(LogicalKeyboardKey.arrowDown): () {
+              _changeVolume(-0.1);
+            },
+            const SingleActivator(LogicalKeyboardKey.keyM): () {
+              _toggleMute();
+            },
+          },
+          child: Focus(
+            autofocus: true,
+            child: bodyWidget,
           ),
         );
       },

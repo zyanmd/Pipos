@@ -39,7 +39,7 @@ class _DailyXpStreakBannerState extends State<DailyXpStreakBanner>
       duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
 
-    _pulseAnimation = Tween<double>(begin: 0.96, end: 1.04).animate(
+    _pulseAnimation = Tween<double>(begin: 0.97, end: 1.0).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
@@ -239,69 +239,76 @@ class _DailyXpStreakBannerState extends State<DailyXpStreakBanner>
             children: [
               // ── Header: Streak & Level / Papan Peringkat ──
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF9500).withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF9500).withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Text('🔥', style: TextStyle(fontSize: 16)),
                         ),
-                        child: const Text('🔥', style: TextStyle(fontSize: 16)),
-                      ),
-                      const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'Klaim XP Harian',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: isDark ? Colors.white : Colors.black,
-                                  letterSpacing: -0.3,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: streak > 0
-                                      ? const Color(0xFFFF9500).withValues(alpha: 0.2)
-                                      : (isDark ? Colors.white12 : Colors.black12),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  streak > 0 ? '$streak Hari' : 'Mulai Streak',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w700,
-                                    color: streak > 0
-                                        ? const Color(0xFFFF9500)
-                                        : (isDark ? Colors.white60 : Colors.black54),
+                              Row(
+                                children: [
+                                  Text(
+                                    'Klaim XP Harian',
+                                    style: TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: isDark ? Colors.white : Colors.black,
+                                      letterSpacing: -0.3,
+                                    ),
                                   ),
+                                  const SizedBox(width: 5),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 5,
+                                      vertical: 1.5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: streak > 0
+                                          ? const Color(0xFFFF9500).withValues(alpha: 0.2)
+                                          : (isDark ? Colors.white12 : Colors.black12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      streak > 0 ? '$streak Hari' : 'Mulai',
+                                      style: TextStyle(
+                                        fontSize: 9.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: streak > 0
+                                            ? const Color(0xFFFF9500)
+                                            : (isDark ? Colors.white60 : Colors.black54),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 1),
+                              Text(
+                                'Bonus streak 7 hari (+150 XP)',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark ? Colors.white54 : Colors.black45,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
-                          Text(
-                            'Streak 7 hari untuk bonus +150 XP!',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isDark ? Colors.white54 : Colors.black45,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   GestureDetector(
                     onTap: () {
                       HapticFeedback.lightImpact();
@@ -314,7 +321,7 @@ class _DailyXpStreakBannerState extends State<DailyXpStreakBanner>
                     },
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
+                        horizontal: 8,
                         vertical: 5,
                       ),
                       decoration: BoxDecoration(
@@ -330,17 +337,17 @@ class _DailyXpStreakBannerState extends State<DailyXpStreakBanner>
                             isLoggedIn
                                 ? 'Lv. ${user?.level ?? 1} • ${(user?.xp ?? 0)} XP'
                                 : 'Peringkat',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xFFFF9500),
+                              color: Color(0xFFFF9500),
                             ),
                           ),
                           const SizedBox(width: 2),
-                          Icon(
+                          const Icon(
                             CupertinoIcons.chevron_forward,
                             size: 11,
-                            color: const Color(0xFFFF9500),
+                            color: Color(0xFFFF9500),
                           ),
                         ],
                       ),
@@ -352,38 +359,34 @@ class _DailyXpStreakBannerState extends State<DailyXpStreakBanner>
               const SizedBox(height: 12),
 
               // ── 7-Day Numbers Row ("angka-angka gitu") ──
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final totalWidth = constraints.maxWidth;
-                  final itemWidth = ((totalWidth - (6 * 6)) / 7).clamp(38.0, 52.0);
+              Row(
+                children: List.generate(7, (index) {
+                  final dayNum = index + 1;
+                  final reward = rewards[index.clamp(0, rewards.length - 1)];
+                  final isGrand = dayNum == 7;
 
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: List.generate(7, (index) {
-                      final dayNum = index + 1;
-                      final reward = rewards[index.clamp(0, rewards.length - 1)];
-                      final isGrand = dayNum == 7;
+                  // Status hari
+                  final isClaimed = !canClaim
+                      ? dayNum <= cycleDay
+                      : dayNum < cycleDay;
+                  final isCurrentTarget = canClaim && dayNum == cycleDay;
+                  final isFuture = dayNum > cycleDay;
 
-                      // Status hari
-                      final isClaimed = !canClaim
-                          ? dayNum <= cycleDay
-                          : dayNum < cycleDay;
-                      final isCurrentTarget = canClaim && dayNum == cycleDay;
-                      final isFuture = dayNum > cycleDay;
-
-                      return _buildDayChip(
+                  return Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(right: index < 6 ? 4.0 : 0.0),
+                      child: _buildDayChip(
                         isDark: isDark,
-                        width: itemWidth,
                         dayNum: dayNum,
                         reward: reward,
                         isGrand: isGrand,
                         isClaimed: isClaimed,
                         isCurrentTarget: isCurrentTarget,
                         isFuture: isFuture,
-                      );
-                    }),
+                      ),
+                    ),
                   );
-                },
+                }),
               ),
 
               const SizedBox(height: 12),
@@ -518,15 +521,19 @@ class _DailyXpStreakBannerState extends State<DailyXpStreakBanner>
                                     color: Colors.white,
                                   ),
                                   const SizedBox(width: 6),
-                                  Text(
-                                    isGrandDay
-                                        ? '🎁 KLAIM HADIAH BESAR HARI KE-7 (+150 XP)!'
-                                        : 'Klaim Bonus Hari ke-$cycleDay (+$nextBonus XP)',
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                      letterSpacing: -0.2,
+                                  Flexible(
+                                    child: Text(
+                                      isGrandDay
+                                          ? '🎁 Klaim Hadiah Hari ke-7 (+150 XP)!'
+                                          : 'Klaim Bonus Hari ke-$cycleDay (+$nextBonus XP)',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                        letterSpacing: -0.2,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
@@ -544,7 +551,6 @@ class _DailyXpStreakBannerState extends State<DailyXpStreakBanner>
 
   Widget _buildDayChip({
     required bool isDark,
-    required double width,
     required int dayNum,
     required int reward,
     required bool isGrand,
@@ -577,13 +583,13 @@ class _DailyXpStreakBannerState extends State<DailyXpStreakBanner>
     if (isClaimed) {
       centerIcon = const Icon(
         CupertinoIcons.checkmark_alt,
-        size: 14,
+        size: 13,
         color: Color(0xFF34C759),
       );
     } else if (isGrand) {
-      centerIcon = const Text('🎁', style: TextStyle(fontSize: 13));
+      centerIcon = const Text('🎁', style: TextStyle(fontSize: 12));
     } else if (isCurrentTarget) {
-      centerIcon = const Text('🔥', style: TextStyle(fontSize: 13));
+      centerIcon = const Text('🔥', style: TextStyle(fontSize: 12));
     } else {
       centerIcon = Icon(
         CupertinoIcons.lock_fill,
@@ -593,32 +599,34 @@ class _DailyXpStreakBannerState extends State<DailyXpStreakBanner>
     }
 
     return Container(
-      width: width,
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: borderColor,
-          width: isCurrentTarget ? 1.8 : 1.0,
+          width: isCurrentTarget ? 1.6 : 1.0,
         ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // Hari ke-X
-          Text(
-            'H$dayNum',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: isCurrentTarget
-                  ? const Color(0xFFFF9500)
-                  : isGrand
-                      ? const Color(0xFFFFD60A)
-                      : isDark
-                          ? Colors.white60
-                          : Colors.black54,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              'H$dayNum',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: isCurrentTarget
+                    ? const Color(0xFFFF9500)
+                    : isGrand
+                        ? const Color(0xFFFFD60A)
+                        : isDark
+                            ? Colors.white60
+                            : Colors.black54,
+              ),
             ),
           ),
           const SizedBox(height: 3),
@@ -626,25 +634,27 @@ class _DailyXpStreakBannerState extends State<DailyXpStreakBanner>
           centerIcon,
           const SizedBox(height: 3),
           // XP
-          Text(
-            '+$reward',
-            style: TextStyle(
-              fontSize: isGrand ? 9.5 : 9.0,
-              fontWeight: isGrand || isCurrentTarget
-                  ? FontWeight.w900
-                  : FontWeight.w600,
-              color: isGrand
-                  ? const Color(0xFFFFD60A)
-                  : isCurrentTarget
-                      ? const Color(0xFFFF9500)
-                      : isClaimed
-                          ? const Color(0xFF34C759)
-                          : isDark
-                              ? Colors.white54
-                              : Colors.black45,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              '+$reward',
+              style: TextStyle(
+                fontSize: isGrand ? 9.5 : 9.0,
+                fontWeight: isGrand || isCurrentTarget
+                    ? FontWeight.w900
+                    : FontWeight.w600,
+                color: isGrand
+                    ? const Color(0xFFFFD60A)
+                    : isCurrentTarget
+                        ? const Color(0xFFFF9500)
+                        : isClaimed
+                            ? const Color(0xFF34C759)
+                            : isDark
+                                ? Colors.white54
+                                : Colors.black45,
+              ),
+              maxLines: 1,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

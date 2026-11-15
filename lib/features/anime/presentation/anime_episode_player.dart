@@ -94,6 +94,8 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
   Timer? _seekFeedbackTimer;
   Timer? _pendingRelativeSeekTimer;
   Duration? _pendingSeekTarget;
+  late final FocusNode _playerFocusNode = FocusNode();
+  double _lastVolumeBeforeMute = 1.0;
   Timer? _bufferingWatchdogTimer;
   DateTime? _bufferingStartTime;
   bool _isAutoRecovering = false;
@@ -546,6 +548,11 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (_isDisposing) return;
 
+    // 🔥 Di Windows / Desktop, JANGAN pause saat beralih tab, window inactive, atau background
+    if (!kIsWeb && Platform.isWindows) {
+      return;
+    }
+
     final isPlaying = _videoPlayerController?.value.isPlaying == true;
 
     // 🔥 Jika video memang sedang TIDAK diputar oleh user, pastikan tetap pause dan matikan Auto-PiP
@@ -563,10 +570,9 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
       return;
     }
 
-    // Pause jika app masuk ke background (paused, hidden, atau inactive di Windows)
+    // Pause jika app masuk ke background di mobile (paused atau hidden)
     if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.hidden ||
-        (Platform.isWindows && state == AppLifecycleState.inactive)) {
+        state == AppLifecycleState.hidden) {
       debugPrint('[PlayerLifecycle] App entering background: $state');
 
       // Jika Auto-PiP aktif dan video sedang berjalan, beri waktu Android transisi ke PiP
@@ -670,6 +676,7 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
     _showPlayerOverlayNotifier.dispose();
     _commentInputController.dispose();
     _commentFocusNode.dispose();
+    _playerFocusNode.dispose();
     try {
       WakelockPlus.disable();
     } catch (_) {}
@@ -2412,6 +2419,114 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
     }
   }
 
+  bool _isTextEditingActive() {
+    final primaryFocus = FocusManager.instance.primaryFocus;
+    if (primaryFocus == null) return false;
+    return primaryFocus.context?.widget is EditableText;
+  }
+
+  void _changeVolume(double delta) {
+    if (_videoPlayerController == null) return;
+    final current = _videoPlayerController!.value.volume;
+    final next = (current + delta).clamp(0.0, 1.0);
+    _videoPlayerController!.setVolume(next);
+    if (next > 0) _lastVolumeBeforeMute = next;
+    _seekFeedbackTimer?.cancel();
+    setState(() {
+      _seekFeedbackText = 'Vol: ${(next * 100).round()}%';
+    });
+    _seekFeedbackTimer = Timer(const Duration(milliseconds: 700), () {
+      if (mounted) setState(() => _seekFeedbackText = null);
+    });
+  }
+
+  void _toggleMute() {
+    if (_videoPlayerController == null) return;
+    final current = _videoPlayerController!.value.volume;
+    if (current > 0.0) {
+      _lastVolumeBeforeMute = current;
+      _videoPlayerController!.setVolume(0.0);
+      _seekFeedbackTimer?.cancel();
+      setState(() {
+        _seekFeedbackText = 'Mute';
+      });
+    } else {
+      final restore = _lastVolumeBeforeMute > 0 ? _lastVolumeBeforeMute : 1.0;
+      _videoPlayerController!.setVolume(restore);
+      _seekFeedbackTimer?.cancel();
+      setState(() {
+        _seekFeedbackText = 'Vol: ${(restore * 100).round()}%';
+      });
+    }
+    _seekFeedbackTimer = Timer(const Duration(milliseconds: 700), () {
+      if (mounted) setState(() => _seekFeedbackText = null);
+    });
+  }
+
+  Map<ShortcutActivator, VoidCallback> _buildKeyboardShortcuts() {
+    return {
+      // Space / Key K: Play / Pause
+      const SingleActivator(LogicalKeyboardKey.space): () {
+        if (_isTextEditingActive()) return;
+        _togglePlayPause();
+      },
+      const SingleActivator(LogicalKeyboardKey.keyK): () {
+        if (_isTextEditingActive()) return;
+        _togglePlayPause();
+      },
+
+      // Arrow Left / Key J: Rewind 10s
+      const SingleActivator(LogicalKeyboardKey.arrowLeft): () {
+        if (_isTextEditingActive()) return;
+        _seekRelative(-10);
+      },
+      const SingleActivator(LogicalKeyboardKey.keyJ): () {
+        if (_isTextEditingActive()) return;
+        _seekRelative(-10);
+      },
+
+      // Arrow Right / Key L: Forward 10s
+      const SingleActivator(LogicalKeyboardKey.arrowRight): () {
+        if (_isTextEditingActive()) return;
+        _seekRelative(10);
+      },
+      const SingleActivator(LogicalKeyboardKey.keyL): () {
+        if (_isTextEditingActive()) return;
+        _seekRelative(10);
+      },
+
+      // Arrow Up: Volume Up
+      const SingleActivator(LogicalKeyboardKey.arrowUp): () {
+        if (_isTextEditingActive()) return;
+        _changeVolume(0.1);
+      },
+
+      // Arrow Down: Volume Down
+      const SingleActivator(LogicalKeyboardKey.arrowDown): () {
+        if (_isTextEditingActive()) return;
+        _changeVolume(-0.1);
+      },
+
+      // Key M: Mute / Unmute
+      const SingleActivator(LogicalKeyboardKey.keyM): () {
+        if (_isTextEditingActive()) return;
+        _toggleMute();
+      },
+
+      // Key F: Fullscreen Toggle
+      const SingleActivator(LogicalKeyboardKey.keyF): () {
+        if (_isTextEditingActive()) return;
+        _toggleFullScreen();
+      },
+
+      // Escape: Exit Fullscreen
+      const SingleActivator(LogicalKeyboardKey.escape): () {
+        if (_isTextEditingActive()) return;
+        if (_isFullscreen) _toggleFullScreen();
+      },
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -2427,59 +2542,51 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
         PipService.instance.disablePipNow();
         unawaited(_recordHistory(force: true));
       },
-      child: ValueListenableBuilder<bool>(
-        valueListenable: PipService.instance.isInPip,
-        builder: (context, isInPip, _) {
-        if (isInPip) {
-          return Scaffold(
-            resizeToAvoidBottomInset: false,
-            backgroundColor: Colors.black,
-            body: SizedBox.expand(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  _buildVideoPlayerBox(),
-                  if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows)
-                    DesktopPipOverlay(
-                      player: _videoPlayerController,
-                      onExpand: () => PipService.instance.exitPip(),
-                      onClose: () {
-                        PipService.instance.exitPip();
-                        _videoPlayerController?.pause();
-                      },
+      child: CallbackShortcuts(
+        bindings: _buildKeyboardShortcuts(),
+        child: Focus(
+          focusNode: _playerFocusNode,
+          autofocus: true,
+          child: ValueListenableBuilder<bool>(
+            valueListenable: PipService.instance.isInPip,
+            builder: (context, isInPip, _) {
+              if (isInPip) {
+                return Scaffold(
+                  resizeToAvoidBottomInset: false,
+                  backgroundColor: Colors.black,
+                  body: SizedBox.expand(
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        _buildVideoPlayerBox(),
+                        if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows)
+                          DesktopPipOverlay(
+                            player: _videoPlayerController,
+                            onExpand: () => PipService.instance.exitPip(),
+                            onClose: () {
+                              PipService.instance.exitPip();
+                              _videoPlayerController?.pause();
+                            },
+                          ),
+                      ],
                     ),
-                ],
-              ),
-            ),
-          );
-        }
-
-        if (_isFullscreen) {
-          return CallbackShortcuts(
-            bindings: {
-              const SingleActivator(LogicalKeyboardKey.escape): () {
-                if (_isFullscreen) _toggleFullScreen();
-              },
-              const SingleActivator(LogicalKeyboardKey.keyF): () {
-                _toggleFullScreen();
-              },
-            },
-            child: Focus(
-              autofocus: true,
-              child: Scaffold(
-                resizeToAvoidBottomInset: false,
-                backgroundColor: Colors.black,
-                body: SizedBox.expand(
-                  child: CinematicFullscreenWrapper(
-                    isFullscreen: true,
-                    onToggleFullscreen: _toggleFullScreen,
-                    child: _buildVideoPlayerBox(),
                   ),
-                ),
-              ),
-            ),
-          );
-        }
+                );
+              }
+
+              if (_isFullscreen) {
+                return Scaffold(
+                  resizeToAvoidBottomInset: false,
+                  backgroundColor: Colors.black,
+                  body: SizedBox.expand(
+                    child: CinematicFullscreenWrapper(
+                      isFullscreen: true,
+                      onToggleFullscreen: _toggleFullScreen,
+                      child: _buildVideoPlayerBox(),
+                    ),
+                  ),
+                );
+              }
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -2600,8 +2707,10 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
         );
       },
     ),
-  );
-}
+  ),
+),
+);
+  }
 
   void _startOverlayTimer() {
     _overlayHideTimer?.cancel();
@@ -2950,9 +3059,21 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
   }
 
   Widget _buildDoubleTapCue() {
-    final isRewind = _seekFeedbackText?.startsWith('-') ?? false;
+    final text = _seekFeedbackText ?? '';
+    final isRewind = text.startsWith('-');
+    final isVol = text.startsWith('Vol') || text == 'Mute';
+    IconData cueIcon;
+    if (isVol) {
+      cueIcon = (text == 'Mute' || text.endsWith('0%'))
+          ? Icons.volume_off_rounded
+          : Icons.volume_up_rounded;
+    } else {
+      cueIcon = isRewind ? Icons.fast_rewind_rounded : Icons.fast_forward_rounded;
+    }
     return Align(
-      alignment: isRewind ? const Alignment(-0.6, 0.0) : const Alignment(0.6, 0.0),
+      alignment: isVol
+          ? Alignment.center
+          : (isRewind ? const Alignment(-0.6, 0.0) : const Alignment(0.6, 0.0)),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
@@ -2970,13 +3091,13 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              isRewind ? Icons.fast_rewind_rounded : Icons.fast_forward_rounded,
+              cueIcon,
               color: Colors.white,
               size: 20,
             ),
             const SizedBox(width: 6),
             Text(
-              _seekFeedbackText!,
+              text,
               style: GoogleFonts.inter(
                 color: Colors.white,
                 fontSize: 13,
@@ -3490,7 +3611,12 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
                       Positioned.fill(
                         child: GestureDetector(
                           behavior: HitTestBehavior.translucent,
-                          onTap: _togglePlayerOverlay,
+                          onTap: () {
+                  if (!_playerFocusNode.hasFocus) {
+                    _playerFocusNode.requestFocus();
+                  }
+                  _togglePlayerOverlay();
+                },
                           onDoubleTapDown: _handleDoubleTap,
                           onLongPressStart: _handleLongPressStart,
                           onLongPressEnd: _handleLongPressEnd,
@@ -3736,7 +3862,12 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
             Positioned.fill(
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onTap: _togglePlayerOverlay,
+                onTap: () {
+                  if (!_playerFocusNode.hasFocus) {
+                    _playerFocusNode.requestFocus();
+                  }
+                  _togglePlayerOverlay();
+                },
                 onDoubleTapDown: _handleDoubleTap,
                 onLongPressStart: _handleLongPressStart,
                 onLongPressEnd: _handleLongPressEnd,
