@@ -339,14 +339,15 @@ class AppTheme {
       );
     }
 
-    const smoothAnim = CupertinoPageTransitionsBuilder();
+    const mobileAnim = CupertinoPageTransitionsBuilder();
+    const desktopAnim = FadeForwardsPageTransitionsBuilder();
     return const PageTransitionsTheme(
       builders: {
-        TargetPlatform.android: smoothAnim,
-        TargetPlatform.iOS: smoothAnim,
-        TargetPlatform.windows: smoothAnim,
-        TargetPlatform.macOS: smoothAnim,
-        TargetPlatform.linux: smoothAnim,
+        TargetPlatform.android: mobileAnim,
+        TargetPlatform.iOS: mobileAnim,
+        TargetPlatform.windows: desktopAnim,
+        TargetPlatform.macOS: desktopAnim,
+        TargetPlatform.linux: desktopAnim,
       },
     );
   }

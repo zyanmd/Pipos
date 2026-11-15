@@ -42,7 +42,7 @@ class _DesktopSidebarState extends State<DesktopSidebar> {
   void _pushScreen(Widget screen) {
     HapticFeedback.selectionClick();
     Navigator.of(context).push(
-      CupertinoPageRoute(builder: (_) => screen),
+      MaterialPageRoute(builder: (_) => screen),
     );
   }
 
@@ -317,30 +317,13 @@ class _DesktopSidebarState extends State<DesktopSidebar> {
           ? Center(
               child: GestureDetector(
                 onTap: () => widget.onTap(0),
-                child: Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(11),
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF6366F1), Color(0xFFA855F7)],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF6366F1).withValues(alpha: 0.35),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      CupertinoIcons.play_arrow_solid,
-                      color: Colors.white,
-                      size: 17,
-                    ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.asset(
+                    'assets/icons/moko.png',
+                    width: 38,
+                    height: 38,
+                    fit: BoxFit.cover,
                   ),
                 ),
               ),
@@ -349,30 +332,13 @@ class _DesktopSidebarState extends State<DesktopSidebar> {
               children: [
                 GestureDetector(
                   onTap: () => widget.onTap(0),
-                  child: Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFF6366F1), Color(0xFFA855F7)],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF6366F1).withValues(alpha: 0.30),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: const Center(
-                      child: Icon(
-                        CupertinoIcons.play_arrow_solid,
-                        color: Colors.white,
-                        size: 15,
-                      ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(9),
+                    child: Image.asset(
+                      'assets/icons/moko.png',
+                      width: 34,
+                      height: 34,
+                      fit: BoxFit.cover,
                     ),
                   ),
                 ),

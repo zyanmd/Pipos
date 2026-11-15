@@ -1,6 +1,6 @@
 import 'dart:ffi' show IntPtr, sizeOf;
 import 'dart:io' show Platform;
-import 'dart:ui' show PointerDeviceKind;
+import 'dart:ui' show PlatformDispatcher, PointerDeviceKind;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -29,6 +29,13 @@ import 'shared/widgets/app_network_image.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   AppSecurityShield.verify();
+
+  // Tangkap error tak terduga secara global agar tidak pernah memicu Force Close di Windows/Android
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('[Moko] Unhandled error captured (preventing crash): $error');
+    return true; // Menandakan error telah ditangani dan mencegah app crash
+  };
+
   if (!kIsWeb) {
     final isAndroid = Platform.isAndroid;
     final is32Bit = sizeOf<IntPtr>() == 4;
@@ -38,7 +45,7 @@ void main() async {
         'platforms': ['android', 'windows', 'linux', 'macos', 'ios'],
         'video.decoders': isAndroid
             ? (is32Bit ? ['FFmpeg'] : ['AMediaCodec', 'FFmpeg'])
-            : ['D3D11', 'DXVA', 'CUDA', 'FFmpeg'],
+            : ['D3D11', 'FFmpeg'],
         'player': {
           'buffer.range': isAndroid ? (is32Bit ? '15000' : '30000') : '60000',
           'demuxer.max_bytes': isAndroid ? (is32Bit ? '16777216' : '33554432') : '104857600',

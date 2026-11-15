@@ -90,7 +90,7 @@ class _RootShellState extends State<RootShell> {
         _currentIndex = index;
         _loadedTabs.add(index);
       });
-      if (_pageController.hasClients) {
+      if (!Responsive.isDesktop(context) && _pageController.hasClients) {
         _pageController.animateToPage(
           index,
           duration: const Duration(milliseconds: 280),
@@ -164,10 +164,10 @@ class _RootShellState extends State<RootShell> {
             return CallbackShortcuts(
               bindings: {
                 const SingleActivator(LogicalKeyboardKey.keyK, control: true): () {
-                  Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const AnimeSearchScreen()));
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AnimeSearchScreen()));
                 },
                 const SingleActivator(LogicalKeyboardKey.keyF, control: true): () {
-                  Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const AnimeSearchScreen()));
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AnimeSearchScreen()));
                 },
                 const SingleActivator(LogicalKeyboardKey.digit1, control: true): () => _onTab(0),
                 const SingleActivator(LogicalKeyboardKey.digit2, control: true): () => _onTab(1),
@@ -177,7 +177,7 @@ class _RootShellState extends State<RootShell> {
                   context.read<ThemeProvider>().toggle();
                 },
                 const SingleActivator(LogicalKeyboardKey.comma, control: true): () {
-                  Navigator.of(context).push(CupertinoPageRoute(builder: (_) => const SettingsScreen()));
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
                 },
               },
               child: Focus(
@@ -185,15 +185,36 @@ class _RootShellState extends State<RootShell> {
                 child: Scaffold(
                   body: Row(
                     children: [
-                      DesktopSidebar(
-                        currentIndex: _currentIndex,
-                        onTap: _onTab,
+                      RepaintBoundary(
+                        child: DesktopSidebar(
+                          currentIndex: _currentIndex,
+                          onTap: _onTab,
+                        ),
                       ),
                       Expanded(
-                        child: Stack(
-                          children: [
-                            _buildPagesStack(),
-                          ],
+                        child: RepaintBoundary(
+                          child: IndexedStack(
+                            index: _currentIndex,
+                            children: List.generate(_tabs.length, (i) {
+                              final tab = _tabs[i];
+                              return NotificationListener<NavigationNotification>(
+                                onNotification: (_) {
+                                  _checkNavState();
+                                  return false;
+                                },
+                                child: Navigator(
+                                  key: tab.navigatorKey,
+                                  observers: [
+                                    _TabNavObserver(onChanged: _checkNavState),
+                                  ],
+                                  onGenerateRoute: (settings) => MaterialPageRoute(
+                                    settings: settings,
+                                    builder: tab.builder,
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
                         ),
                       ),
                     ],
