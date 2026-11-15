@@ -42,18 +42,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _continueAsGuest() {
-    HapticFeedback.lightImpact();
-    if (Navigator.canPop(context)) {
-      Navigator.pop(context);
-    } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const RootShell()),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -209,30 +197,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: auth.loading ? null : _loginWithGoogle,
                     isLoading: auth.loading,
                     text: 'Masuk dengan Google',
-                  ),
-
-                  const SizedBox(height: 14),
-
-                  // Masuk sebagai Tamu (Secondary Pill Button)
-                  SizedBox(
-                    height: 52,
-                    child: TextButton(
-                      onPressed: auth.loading ? null : _continueAsGuest,
-                      style: TextButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(26),
-                        ),
-                      ),
-                      child: Text(
-                        'Lanjutkan sebagai Tamu',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: -0.2,
-                          color: isDark ? Colors.white70 : Colors.black54,
-                        ),
-                      ),
-                    ),
                   ),
 
                   const SizedBox(height: 24),

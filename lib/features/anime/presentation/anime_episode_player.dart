@@ -892,12 +892,23 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
       return '${ApiConfig.baseUrl}$url';
     }
 
+    // 1. Pixeldrain: Wajib proxy ke VPS stream-proxy agar tidak diblokir ISP Indonesia (Internet Positif / DNS Nawala)
     if (url.contains('pixeldrain.com/u/') || url.contains('pixeldrain.com/l/')) {
       final pixelMatch = RegExp(r'pixeldrain\.com/(?:u|l)/([a-zA-Z0-9_-]+)', caseSensitive: false).firstMatch(url);
       if (pixelMatch != null) {
         final fileId = pixelMatch.group(1);
-        return 'https://pixeldrain.com/api/file/$fileId?download';
+        final pdUrl = 'https://pixeldrain.com/api/file/$fileId?download';
+        return '${ApiConfig.apiBase}/ylnime/stream-proxy?url=${Uri.encodeQueryComponent(pdUrl)}';
       }
+    }
+    if (url.contains('pixeldrain.com/api/file/') && !url.contains('/stream-proxy')) {
+      return '${ApiConfig.apiBase}/ylnime/stream-proxy?url=${Uri.encodeQueryComponent(url)}';
+    }
+
+    // 2. Direct S3 CDN: Wajib proxy ke VPS stream-proxy agar Content-Type dipaksa video/mp4 (bukan application/octet-stream).
+    // Ini krusial agar ExoPlayer di 32-bit (armeabi-v7a) dan 64-bit (arm64-v8a) tidak crash dengan ExoPlaybackException.
+    if (url.contains('s3.animeverse.id') && !url.contains('/stream-proxy')) {
+      return '${ApiConfig.apiBase}/ylnime/stream-proxy?url=${Uri.encodeQueryComponent(url)}';
     }
 
     final gdriveMatch = RegExp(r'drive\.google\.com/file/d/([a-zA-Z0-9_-]+)', caseSensitive: false).firstMatch(url);
@@ -999,23 +1010,7 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
     }
 
     final targetQuality = _resolveTargetQuality(_ylnimeStream!.qualities, _preferredQuality);
-
-    final validServers = targetQuality.serverList.where((s) {
-      final u = s.url.trim();
-      return u.isNotEmpty && !u.contains(r'${') && (u.startsWith('http') || u.startsWith('/'));
-    }).toList();
-
-    // Prioritaskan server Proxy VPS Cepat (Rekomendasi v7a & Anti-Buffering) di urutan paling atas
-    validServers.sort((a, b) {
-      final aIsProxy = a.url.contains('/stream-proxy') || a.server.toLowerCase().contains('proxy');
-      final bIsProxy = b.url.contains('/stream-proxy') || b.server.toLowerCase().contains('proxy');
-      if (aIsProxy && !bIsProxy) return -1;
-      if (!aIsProxy && bIsProxy) return 1;
-
-      return 0;
-    });
-
-    final serversPool = validServers.isNotEmpty ? validServers : targetQuality.serverList;
+    final serversPool = _getCurrentQualityServers();
 
     if (serversPool.isEmpty) {
       final best = _ylnimeStream?.bestPlayable;

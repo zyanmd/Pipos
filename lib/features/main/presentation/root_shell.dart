@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/services/deep_link_service.dart';
 import '../../../core/services/pip_service.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../shared/providers/auth_provider.dart';
 import '../../../shared/widgets/desktop_sidebar.dart';
 import '../../../shared/widgets/ios_bottom_nav_bar.dart';
+import '../../auth/presentation/welcome_screen.dart';
 import '../../anime/presentation/anime_home_screen.dart';
 import '../../comic/presentation/comic_home_screen.dart';
 import '../../review/presentation/review_home_screen.dart';
@@ -119,6 +122,19 @@ class _RootShellState extends State<RootShell> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    if (!auth.isAuthenticated) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+            (r) => false,
+          );
+        }
+      });
+      return const Scaffold(backgroundColor: Colors.black);
+    }
+
     return PopScope(
       canPop: _currentIndex == 0 && !(_tabs[_currentIndex].navigatorKey.currentState?.canPop() ?? false),
       onPopInvokedWithResult: (didPop, _) {

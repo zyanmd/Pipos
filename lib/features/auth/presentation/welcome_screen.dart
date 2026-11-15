@@ -1,7 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../main/presentation/root_shell.dart';
 import 'login_screen.dart';
 
 /// Halaman Welcome / Onboarding dengan latar belakang poster anime bergerak (infinite kinetic scroll)
@@ -174,14 +173,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         MaterialPageRoute(builder: (_) => const LoginScreen()),
       );
     }
-  }
-
-  void _onSkipToGuest() {
-    HapticFeedback.lightImpact();
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const RootShell()),
-    );
   }
 
   @override
@@ -358,54 +349,29 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
                       const SizedBox(height: 14),
 
-                      // Tombol Sekunder: Sudah Punya Akun & Masuk Tamu
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              HapticFeedback.lightImpact();
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                              );
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              child: Text(
-                                'Masuk dengan Google',
-                                style: TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white.withValues(alpha: 0.90),
-                                  letterSpacing: -0.2,
-                                ),
+                      // Tombol Sekunder: Sudah Punya Akun Masuk
+                      Center(
+                        child: GestureDetector(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const LoginScreen()),
+                            );
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            child: Text(
+                              'Sudah punya akun? Masuk di sini',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white.withValues(alpha: 0.90),
+                                letterSpacing: -0.2,
                               ),
                             ),
                           ),
-                          Text(
-                            '•',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.4),
-                              fontSize: 14,
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: _onSkipToGuest,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              child: Text(
-                                'Masuk Tamu',
-                                style: TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white.withValues(alpha: 0.70),
-                                  letterSpacing: -0.2,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                       const SizedBox(height: 6),
                     ],
