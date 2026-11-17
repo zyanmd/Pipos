@@ -1171,22 +1171,29 @@ class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
               ),
             ],
 
-            // ── 4. LAMPIRAN KLIP ANIME / GAMBAR / GIF ──
-            if (item.isClip) ...[
+            // ── 4. LAMPIRAN KLIP ANIME / VIDEO / GAMBAR / GIF ──
+            if (item.isVideoOrClip) ...[
               const SizedBox(height: 12),
               ReviewClipPlayerWidget(
                 review: item,
                 onOpenFullPlayer: () => _navigateToTarget(item),
+                onLike: () => _toggleLike(item),
               ),
             ] else if (item.mediaUrl != null && item.mediaUrl!.isNotEmpty) ...[
               const SizedBox(height: 12),
               ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: AppNetworkImage(
-                  url: item.mediaUrl!,
-                  height: 170,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
+                borderRadius: BorderRadius.circular(16),
+                child: GestureDetector(
+                  onDoubleTap: () {
+                    HapticFeedback.mediumImpact();
+                    _toggleLike(item);
+                  },
+                  child: AppNetworkImage(
+                    url: item.fullMediaUrl ?? item.mediaUrl!,
+                    height: 220,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
             ],

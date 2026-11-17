@@ -38,14 +38,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
     final res = await GamificationRepository.instance.getLeaderboard(
       period: _selectedPeriod,
-      limit: 100,
+      limit: 20,
     );
 
     if (!mounted) return;
 
     if (res != null) {
       setState(() {
-        _users = res.users;
+        _users = res.users.take(20).toList();
         _myRank = res.myRank;
         _isLoading = false;
       });
@@ -211,7 +211,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
 
   Widget _buildPeriodSelector(bool isDark) {
     const periods = [
-      (key: 'all', label: 'Sepanjang Waktu', icon: CupertinoIcons.sparkles),
+      (key: 'all', label: 'Semua Waktu', icon: CupertinoIcons.sparkles),
       (key: 'monthly', label: 'Bulan Ini', icon: CupertinoIcons.calendar),
       (key: 'weekly', label: 'Minggu Ini', icon: CupertinoIcons.flame_fill),
     ];
@@ -261,29 +261,37 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                       : null,
                 ),
                 child: Center(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        p.icon,
-                        size: 13.5,
-                        color: isSelected
-                            ? (isDark ? Colors.white : Colors.black)
-                            : (isDark ? Colors.white54 : Colors.black45),
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        p.label,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          p.icon,
+                          size: 13,
                           color: isSelected
                               ? (isDark ? Colors.white : Colors.black)
-                              : (isDark ? Colors.white60 : Colors.black54),
+                              : (isDark ? Colors.white54 : Colors.black45),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            p.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                              letterSpacing: -0.2,
+                              color: isSelected
+                                  ? (isDark ? Colors.white : Colors.black)
+                                  : (isDark ? Colors.white60 : Colors.black54),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

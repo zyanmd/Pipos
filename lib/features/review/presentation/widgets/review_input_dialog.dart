@@ -164,6 +164,30 @@ class _ReviewInputDialogState extends State<ReviewInputDialog> {
         setState(() {
           _selectedMedia = File(picked.path);
           _existingMediaUrl = null;
+          _mediaType = picked.path.toLowerCase().endsWith('.gif') ? 'gif' : 'image';
+          _clipStart = null;
+          _clipEnd = null;
+        });
+        HapticFeedback.selectionClick();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _pickVideo() async {
+    try {
+      HapticFeedback.lightImpact();
+      final picker = ImagePicker();
+      final picked = await picker.pickVideo(
+        source: ImageSource.gallery,
+        maxDuration: const Duration(minutes: 5),
+      );
+      if (picked != null) {
+        setState(() {
+          _selectedMedia = File(picked.path);
+          _existingMediaUrl = null;
+          _mediaType = 'video';
+          _clipStart = null;
+          _clipEnd = null;
         });
         HapticFeedback.selectionClick();
       }
@@ -880,13 +904,53 @@ class _ReviewInputDialogState extends State<ReviewInputDialog> {
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                _selectedMedia != null || (_existingMediaUrl != null && _mediaType != 'clip')
+                                _selectedMedia != null && _mediaType != 'video'
                                     ? 'Ganti Foto'
-                                    : 'Tambah Foto/GIF',
+                                    : 'Foto/GIF',
                                 style: TextStyle(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w600,
                                   color: isDark ? Colors.white : Colors.black87,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // Tombol Video Galeri (Gaya IG / FB)
+                      CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        onPressed: _pickVideo,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: _mediaType == 'video'
+                                ? const Color(0xFFFF2D55).withValues(alpha: 0.16)
+                                : (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05)),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: _mediaType == 'video'
+                                  ? const Color(0xFFFF2D55).withValues(alpha: 0.5)
+                                  : (isDark ? Colors.white12 : Colors.black12),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                CupertinoIcons.video_camera_solid,
+                                size: 16,
+                                color: _mediaType == 'video' ? const Color(0xFFFF2D55) : (isDark ? Colors.white : Colors.black87),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                _mediaType == 'video' ? 'Ganti Video' : 'Video',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: _mediaType == 'video' ? const Color(0xFFFF2D55) : (isDark ? Colors.white : Colors.black87),
                                 ),
                               ),
                             ],
@@ -1046,16 +1110,81 @@ class _ReviewInputDialogState extends State<ReviewInputDialog> {
                   // Preview Media
                   if (_selectedMedia != null) ...[
                     const SizedBox(height: 12),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.file(_selectedMedia!, height: 130, width: double.infinity, fit: BoxFit.cover),
-                    ),
+                    if (_mediaType == 'video' ||
+                        _selectedMedia!.path.toLowerCase().endsWith('.mp4') ||
+                        _selectedMedia!.path.toLowerCase().endsWith('.mov')) ...[
+                      Container(
+                        height: 120,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1C1C22) : const Color(0xFFE5E5EA),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                        ),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(CupertinoIcons.play_circle_fill, size: 38, color: Color(0xFFFF2D55)),
+                                const SizedBox(height: 6),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  child: Text(
+                                    _selectedMedia!.path.split(Platform.pathSeparator).last,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: GestureDetector(
+                                onTap: () => setState(() {
+                                  _selectedMedia = null;
+                                  _mediaType = null;
+                                }),
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                                  child: const Icon(CupertinoIcons.xmark, size: 14, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else ...[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.file(_selectedMedia!, height: 130, width: double.infinity, fit: BoxFit.cover),
+                      ),
+                    ],
                   ] else if (_existingMediaUrl != null) ...[
                     const SizedBox(height: 12),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.network(_existingMediaUrl!, height: 130, width: double.infinity, fit: BoxFit.cover),
-                    ),
+                    if (_mediaType == 'video' || _existingMediaUrl!.toLowerCase().endsWith('.mp4')) ...[
+                      Container(
+                        height: 120,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1C1C22) : const Color(0xFFE5E5EA),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+                        ),
+                        child: const Center(
+                          child: Icon(CupertinoIcons.play_circle_fill, size: 38, color: Color(0xFFFF2D55)),
+                        ),
+                      ),
+                    ] else ...[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.network(_existingMediaUrl!, height: 130, width: double.infinity, fit: BoxFit.cover),
+                      ),
+                    ],
                   ],
 
                   const SizedBox(height: 16),

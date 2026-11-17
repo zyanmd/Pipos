@@ -1,3 +1,4 @@
+import '../../../../core/config/api_config.dart';
 import '../../../../core/utils/app_date_utils.dart';
 import '../../../auth/data/models/user_model.dart';
 
@@ -239,9 +240,36 @@ class UserReviewModel {
     }
   }
 
-  bool get isClip =>
-      (mediaType == 'clip') ||
-      (clipStart != null && clipEnd != null && clipEnd! > (clipStart ?? 0));
+  bool get isClip => isVideoOrClip;
+
+  bool get isVideoOrClip {
+    if (mediaType == 'clip' || mediaType == 'video') return true;
+    if (clipStart != null && clipEnd != null && clipEnd! > (clipStart ?? 0)) return true;
+    if (mediaUrl != null && mediaUrl!.isNotEmpty) {
+      final lower = mediaUrl!.toLowerCase();
+      if (lower.endsWith('.mp4') ||
+          lower.endsWith('.m3u8') ||
+          lower.endsWith('.webm') ||
+          lower.endsWith('.mov') ||
+          lower.contains('/video') ||
+          lower.contains('.mp4')) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  String? get fullMediaUrl {
+    if (mediaUrl == null || mediaUrl!.isEmpty) return null;
+    final clean = mediaUrl!.trim();
+    if (clean.startsWith('http://') || clean.startsWith('https://')) {
+      return clean;
+    }
+    if (clean.startsWith('/')) {
+      return '${ApiConfig.baseUrl}$clean';
+    }
+    return '${ApiConfig.baseUrl}/$clean';
+  }
 
   static String formatSeconds(double totalSec) {
     final s = totalSec.round();

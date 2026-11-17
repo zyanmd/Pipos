@@ -8,8 +8,8 @@ class AppUpdateService {
   AppUpdateService._();
   static final AppUpdateService instance = AppUpdateService._();
 
-  static const String currentVersion = '1.2.6';
-  static const int currentBuildNumber = 2066;
+  static const String currentVersion = '1.2.8';
+  static const int currentBuildNumber = 2068;
 
   /// Notifier untuk update yang tersedia (agar UI profil & navbar dapat merespons tanpa pop-up)
   final ValueNotifier<AppUpdateModel?> availableUpdateNotifier = ValueNotifier<AppUpdateModel?>(null);
@@ -283,6 +283,15 @@ class AppUpdateService {
     fileSize: '~98 MB',
     changelog: const [
       UpdateChangelogItem(
+        version: '1.2.8',
+        date: '2026-11-17',
+        changes:
+            '🚀 **Versi 1.2.8 - Pembaruan & Peningkatan Sistem!**\n'
+            '• **Leaderboard Optimal** - Menampilkan 20 petualang teratas dengan performa lebih cepat.\n'
+            '• **Peningkatan Notifikasi Update** - Sistem deteksi versi pintar tanpa notifikasi jika aplikasi sudah versi terbaru.\n'
+            '• **Optimasi Desktop & Stabilitas** - Peningkatan performa animasi dan stabilitas aplikasi.',
+      ),
+      UpdateChangelogItem(
         version: '1.1.6',
         date: '2026-09-28',
         changes:
@@ -319,6 +328,15 @@ class AppUpdateService {
     updateUrl: 'https://sfile.co/Dj19cVRkhLH',
     fileSize: '~98 MB',
     changelog: const [
+      UpdateChangelogItem(
+        version: '1.2.8',
+        date: '2026-11-17',
+        changes:
+            '🚀 **Versi 1.2.8 - Pembaruan & Peningkatan Sistem!**\n'
+            '• **Leaderboard Optimal** - Menampilkan 20 petualang teratas dengan performa lebih cepat.\n'
+            '• **Peningkatan Notifikasi Update** - Sistem deteksi versi pintar tanpa notifikasi jika aplikasi sudah versi terbaru.\n'
+            '• **Optimasi Desktop & Stabilitas** - Peningkatan performa animasi dan stabilitas aplikasi.',
+      ),
       UpdateChangelogItem(
         version: '1.2.4',
         date: '2026-11-10',

@@ -2830,6 +2830,50 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
     });
   }
 
+  double _verticalDragDistance = 0.0;
+
+  void _handleVerticalDragStart(DragStartDetails details) {
+    if (_isScreenLockedNotifier.value) return;
+    if (_isScrubbing) return;
+    _verticalDragDistance = 0.0;
+  }
+
+  void _handleVerticalDragUpdate(DragUpdateDetails details) {
+    if (_isScreenLockedNotifier.value) return;
+    if (_isScrubbing) return;
+    _verticalDragDistance += details.primaryDelta ?? 0.0;
+  }
+
+  void _handleVerticalDragEnd(DragEndDetails details) {
+    if (_isScreenLockedNotifier.value) return;
+    if (_isScrubbing) return;
+
+    final velocity = details.primaryVelocity ?? 0.0;
+    // Geser kebawah: tarikan positif atau kecepatan flick positif (>200)
+    final isSwipeDown = _verticalDragDistance > 40.0 || velocity > 200.0;
+    // Geser keatas: tarikan negatif atau kecepatan flick negatif (<-200)
+    final isSwipeUp = _verticalDragDistance < -40.0 || velocity < -200.0;
+
+    if (!_isFullscreen) {
+      // Pada halaman nonton biasa, geser kebawah (atau keatas) langsung masuk fullscreen
+      if (isSwipeDown || isSwipeUp) {
+        HapticFeedback.mediumImpact();
+        _toggleFullScreen();
+      }
+    } else {
+      // Saat sedang fullscreen, geser kebawah atau keatas untuk keluar dari fullscreen
+      if (isSwipeDown || isSwipeUp) {
+        HapticFeedback.lightImpact();
+        _toggleFullScreen();
+      }
+    }
+    _verticalDragDistance = 0.0;
+  }
+
+  void _handleVerticalDragCancel() {
+    _verticalDragDistance = 0.0;
+  }
+
   void _handleLongPressCancel() {
     if (!_isHoldingForSpeed) return;
     _videoPlayerController?.setPlaybackSpeed(_speedBeforeHold);
@@ -3623,6 +3667,10 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
                           onLongPressStart: _handleLongPressStart,
                           onLongPressEnd: _handleLongPressEnd,
                           onLongPressCancel: _handleLongPressCancel,
+                          onVerticalDragStart: _handleVerticalDragStart,
+                          onVerticalDragUpdate: _handleVerticalDragUpdate,
+                          onVerticalDragEnd: _handleVerticalDragEnd,
+                          onVerticalDragCancel: _handleVerticalDragCancel,
                           child: const SizedBox.expand(),
                         ),
                       ),
@@ -3874,6 +3922,10 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
                 onLongPressStart: _handleLongPressStart,
                 onLongPressEnd: _handleLongPressEnd,
                 onLongPressCancel: _handleLongPressCancel,
+                onVerticalDragStart: _handleVerticalDragStart,
+                onVerticalDragUpdate: _handleVerticalDragUpdate,
+                onVerticalDragEnd: _handleVerticalDragEnd,
+                onVerticalDragCancel: _handleVerticalDragCancel,
                 child: const SizedBox.expand(),
               ),
             ),

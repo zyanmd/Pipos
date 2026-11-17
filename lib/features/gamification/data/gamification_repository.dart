@@ -9,7 +9,7 @@ class GamificationRepository {
   /// Mengambil data papan peringkat (Leaderboard)
   Future<LeaderboardResponse?> getLeaderboard({
     String period = 'all', // 'all', 'monthly', 'weekly'
-    int limit = 50,
+    int limit = 20,
   }) async {
     try {
       final response = await ApiClient.instance.get(
