@@ -37,6 +37,7 @@ dependencies:
 
   # UI & utility
   google_fonts: ^6.1.0
+  liquid_glass_widgets: ^1.18.0
   flutter_svg: ^2.0.9
   intl: 0.20.3
   image_picker: ^1.0.4

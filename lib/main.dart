@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:fvp/fvp.dart' as fvp;
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'core/network/api_client.dart';
 import 'core/services/app_security_shield.dart';
 import 'core/services/admob_service.dart';
@@ -119,7 +120,13 @@ void main() async {
   // Prefetch data anime home saat splash screen mulai berjalan
   AnimeRepository.instance.prefetchHome();
 
-  runApp(const MokoApp());
+  await LiquidGlassWidgets.initialize();
+  runApp(
+    LiquidGlassWidgets.wrap(
+      child: const MokoApp(),
+      brightnessResolver: Theme.maybeBrightnessOf,
+    ),
+  );
 }
 
 class MokoApp extends StatefulWidget {

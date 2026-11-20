@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:liquid_glass_widgets/liquid_glass_widgets.dart';
 import 'package:provider/provider.dart';
 import '../../features/update/data/models/app_update_model.dart';
 import '../../features/update/services/app_update_service.dart';
@@ -31,32 +32,17 @@ class MokoBottomNavBar extends StatelessWidget {
     final bottomInset = MediaQuery.of(context).padding.bottom;
     final bottomMargin = bottomInset > 0 ? bottomInset + 8 : 18.0;
 
-    final bgColor = isDark
-        ? const Color(0xF20F0F12)
-        : const Color(0xF8FFFFFF);
-    final borderColor = isDark ? const Color(0xFF262626) : const Color(0xFFDBDBDB);
-
     return RepaintBoundary(
-      child: Container(
-        margin: EdgeInsets.fromLTRB(16, 0, 16, bottomMargin),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(36),
-          border: Border.all(
-            color: borderColor,
-            width: 0.5,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(16, 0, 16, bottomMargin),
+        child: AdaptiveGlass(
+          shape: LiquidRoundedSuperellipse(borderRadius: 36),
+          settings: const LiquidGlassSettings(
+            blur: 18,
+            thickness: 28,
+            chromaticAberration: 2,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.40 : 0.09),
-              blurRadius: 24,
-              spreadRadius: 1,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(36),
+          quality: GlassQuality.premium,
           child: SizedBox(
             height: 64,
             child: Row(
