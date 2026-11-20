@@ -8,12 +8,12 @@ class GlassCard extends StatelessWidget {
   const GlassCard({
     super.key,
     this.child,
-    this.borderRadius = 16,
-    this.sigma = 8,
-    this.opacity = 0.65,
+    this.borderRadius = 20,
+    this.sigma = 12,
+    this.opacity = 0.72,
     this.tint,
     this.showBorder = true,
-    this.padding,
+    this.padding = const EdgeInsets.all(16),
     this.margin,
   });
 

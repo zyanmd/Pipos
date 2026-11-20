@@ -18,7 +18,7 @@ class AppNetworkImage extends StatelessWidget {
     this.placeholder,
     this.memCacheWidth,
     this.memCacheHeight,
-    this.filterQuality = FilterQuality.medium,
+    this.filterQuality = FilterQuality.high,
     this.alignment = Alignment.center,
     this.useDiskCache = false,
   });
@@ -71,18 +71,18 @@ class AppNetworkImage extends StatelessWidget {
     };
 
     final screenW = MediaQuery.sizeOf(context).width;
-    // Clamp effective ratio to max 2.0 to save up to 4x RAM on 3.5x/4.0x DPI devices with zero perceived quality loss
-    final pixelRatio = MediaQuery.devicePixelRatioOf(context).clamp(1.0, 2.0);
+    // HD decoding: izinkan sampai 3x DPI agar thumbnail tajam di layar 3x/4x.
+    final pixelRatio = MediaQuery.devicePixelRatioOf(context).clamp(1.0, 3.0);
     final hasExplicitWidth = width != null && width!.isFinite && width! > 0;
     final targetW = hasExplicitWidth ? width! : screenW;
 
     final int cacheW = memCacheWidth ??
         (hasExplicitWidth
-            ? (targetW * pixelRatio).toInt().clamp(80, 720)
-            : (screenW * 1.5).toInt().clamp(200, 720));
+            ? (targetW * pixelRatio).toInt().clamp(120, 1080)
+            : (screenW * pixelRatio).toInt().clamp(360, 1440));
     final int? cacheH = memCacheHeight ??
         ((height != null && height!.isFinite && height! > 0)
-            ? (height! * pixelRatio).toInt().clamp(80, 960)
+            ? (height! * pixelRatio).toInt().clamp(120, 1440)
             : null);
 
     Widget imageWidget;

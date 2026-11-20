@@ -69,7 +69,7 @@ class PosterCard extends StatelessWidget {
               tag: heroTag ?? 'poster_${title}_${imageUrl.hashCode}',
               child: Container(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(18),
                   color: isDark ? AppColors.iosCardDark : AppColors.iosCardLight,
                   border: Border.all(
                     color: isDark ? AppColors.iosHairlineDark : AppColors.iosHairlineLight,
@@ -84,7 +84,7 @@ class PosterCard extends StatelessWidget {
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(13.5),
+                  borderRadius: BorderRadius.circular(17.5),
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
@@ -93,11 +93,11 @@ class PosterCard extends StatelessWidget {
                         borderRadius: 0,
                         fit: BoxFit.cover,
                         memCacheWidth: (width.isFinite && width > 0)
-                            ? (width * 2.0).toInt().clamp(160, 480)
-                            : 320,
-                        memCacheHeight: (cardHeight != null && cardHeight.isFinite && cardHeight > 0)
-                            ? (cardHeight * 2.0).toInt().clamp(240, 720)
+                            ? (width * 3.0).toInt().clamp(180, 720)
                             : 480,
+                        memCacheHeight: (cardHeight != null && cardHeight.isFinite && cardHeight > 0)
+                            ? (cardHeight * 3.0).toInt().clamp(240, 1080)
+                            : 720,
                       ),
                       // Smooth iOS gradient vignette
                       Container(
@@ -249,7 +249,7 @@ class PosterCard extends StatelessWidget {
                 child: Container(
                   width: width,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(18),
                     border: Border.all(
                       color: isDark ? AppColors.iosHairlineDark : AppColors.iosHairlineLight,
                       width: 0.5,
@@ -263,7 +263,7 @@ class PosterCard extends StatelessWidget {
                     ],
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(13.5),
+                    borderRadius: BorderRadius.circular(17.5),
                     child: AspectRatio(
                       aspectRatio: aspectRatio,
                       child: Stack(
@@ -274,7 +274,7 @@ class PosterCard extends StatelessWidget {
                             borderRadius: 0,
                             fit: BoxFit.cover,
                             memCacheWidth: (width.isFinite && width > 0)
-                                ? (width * 2.0).toInt().clamp(160, 480)
+                                ? (width * 3.0).toInt().clamp(180, 720)
                                 : 320,
                           ),
                           if (cleanBadge != null && cleanBadge.isNotEmpty)
@@ -389,7 +389,7 @@ class ScheduleCard extends StatelessWidget {
                 width: width,
                 height: height,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(18),
                   color: isDark ? AppColors.iosCardDark : AppColors.iosCardLight,
                   border: Border.all(
                     color: isDark ? AppColors.iosHairlineDark : AppColors.iosHairlineLight,
@@ -404,7 +404,7 @@ class ScheduleCard extends StatelessWidget {
                   ],
                 ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(13.5),
+                  borderRadius: BorderRadius.circular(17.5),
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
@@ -412,8 +412,8 @@ class ScheduleCard extends StatelessWidget {
                         url: imageUrl,
                         borderRadius: 0,
                         fit: BoxFit.cover,
-                        memCacheWidth: (width * 2.0).toInt().clamp(140, 360),
-                        memCacheHeight: (height * 2.0).toInt().clamp(180, 480),
+                        memCacheWidth: (width * 3.0).toInt().clamp(180, 720),
+                        memCacheHeight: (height * 3.0).toInt().clamp(240, 1080),
                       ),
                       Container(
                         decoration: const BoxDecoration(

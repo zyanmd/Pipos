@@ -22,7 +22,6 @@ import '../../anime/presentation/anime_new_releases_screen.dart';
 import '../../genre/presentation/unified_genre_screen.dart';
 import '../../genre/presentation/genre_detail_screen.dart';
 import '../../../shared/widgets/featured_content_slider.dart';
-import '../../chat/presentation/widgets/chat_marquee_banner.dart';
 import '../data/models/ylnime_extra_models.dart';
 import 'anime_hyper_screen.dart';
 import 'anime_episode_player.dart';
@@ -37,6 +36,18 @@ import '../../reels/presentation/widgets/anime_reels_tray.dart';
 import '../../../core/services/adult_content_service.dart';
 import '../../jav/presentation/jav_home_screen.dart';
 import '../../gamification/presentation/widgets/daily_xp_streak_banner.dart';
+
+/// Pisahkan genre terakhir yang nempel ke sinopsis dari API.
+/// Contoh: "Action • Adventure • ComedyGold Roger..." -> "Action • Adventure • Comedy • Gold Roger..."
+String _tidySynopsis(String raw) {
+  var s = raw.trim().replaceAll(RegExp(r'\s+'), ' ');
+  s = s.replaceAllMapped(
+    RegExp(r'(•\s*[A-Za-z]+)([A-Z][a-z])'),
+    (m) => '${m.group(1)} • ${m.group(2)}',
+  );
+  return s.replaceAll(RegExp(r'•\s*•'), '•').trim();
+}
+
 
 class AnimeHomeScreen extends StatefulWidget {
   const AnimeHomeScreen({super.key});
@@ -886,7 +897,7 @@ class _AnimeHomeScreenState extends State<AnimeHomeScreen> {
         posterUrl: a.thumb,
         eyebrowTag: tag,
         subtitle: a.synopsis != null && a.synopsis!.isNotEmpty
-            ? a.synopsis!
+            ? _tidySynopsis(a.synopsis!)
             : (a.episode != null ? '${AnimeModel.formatEpisode(a.episode)} • Sub Indo' : (a.status ?? 'Rilis Baru')),
         badge: a.score != null && a.score!.isNotEmpty ? '★ ${a.score}' : null,
         actionIcon: CupertinoIcons.play_fill,
@@ -1016,14 +1027,6 @@ class _AnimeHomeScreenState extends State<AnimeHomeScreen> {
               // Pemberitahuan / Announcement Banner (Push Alert jika ada)
               const SliverToBoxAdapter(
                 child: AnnouncementBanner(),
-              ),
-
-              // Chat Komunitas Running Text Banner
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.only(top: 8, bottom: 4),
-                  child: ChatMarqueeBanner(),
-                ),
               ),
 
               // Daily XP Claim & 7-Day Streak Banner
