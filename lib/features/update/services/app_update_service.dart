@@ -9,7 +9,7 @@ class AppUpdateService {
   static final AppUpdateService instance = AppUpdateService._();
 
   static const String currentVersion = '1.2.8';
-  static const int currentBuildNumber = 2068;
+  static const int currentBuildNumber = 4070;
 
   /// Notifier untuk update yang tersedia (agar UI profil & navbar dapat merespons tanpa pop-up)
   final ValueNotifier<AppUpdateModel?> availableUpdateNotifier = ValueNotifier<AppUpdateModel?>(null);
