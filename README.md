@@ -1,9 +1,9 @@
-# AnimeVerse — Flutter Anime & Comic App
+# MOKO — Anime & Comic App
 
-A modern, iOS-styled Flutter app for streaming anime and reading comics. Built on top of your Flask backend at **api.pipinipon.site** with full light/dark theme support.
+Aplikasi streaming anime dan baca komik modern berbasis Flutter.
 
-![Flutter](https://img.shields.io/badge/Flutter-3.13+-02569B?logo=flutter)
-![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Web-2D2D2D)
+### 📥 Unduh Aplikasi (Releases)
+Versi terbaru aplikasi Android dan Windows dapat diunduh di halaman [Releases](https://github.com/zyanmd/Pipos/releases).
 
 ---
 
