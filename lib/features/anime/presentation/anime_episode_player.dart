@@ -20,6 +20,7 @@ import 'widgets/genre_role_widgets.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/services/anime_watch_progress_service.dart';
+import '../../../core/services/mal_service.dart';
 import '../../../core/services/user_decor_resolver.dart';
 import '../../../features/anime/data/anime_repository.dart';
 import '../../../features/anime/data/models/anime_model.dart';
@@ -76,6 +77,7 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
   // VideoPlayer Engine (fvp hardware acceleration on Android, iOS, Windows, Linux)
   VideoPlayerController? _videoPlayerController;
   bool _isCompletedHandled = false;
+  int _playerSessionId = 0;
 
   final ValueNotifier<Duration> _positionNotifier = ValueNotifier(Duration.zero);
   final ValueNotifier<Duration> _durationNotifier = ValueNotifier(Duration.zero);
@@ -84,8 +86,22 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
   bool _wasFullscreenBeforePip = false;
   bool _isActuallyInPipMode = false;
   double _savedScrollOffsetBeforePip = 0.0;
+  final GlobalKey _videoBoxGlobalKey = GlobalKey(debugLabel: 'anime_video_player_box');
+  DateTime? _lastFullscreenToggleTime;
+  DateTime? _ignoreSwipeFullscreenUntil;
   final ValueNotifier<bool> _showPlayerOverlayNotifier = ValueNotifier<bool>(true);
   Timer? _overlayHideTimer;
+
+  // Fullscreen Gestures (Volume & Brightness - iOS style)
+  int _fullscreenDragSide = 0; // 1: left (brightness), 2: right (volume)
+  double _fullscreenDragStartY = 0.0;
+  double _fullscreenDragInitialVal = 0.0;
+  bool _fullscreenDragThresholdPassed = false;
+  double _screenBrightness = 1.0;
+  String? _gestureFeedbackLabel;
+  IconData? _gestureFeedbackIcon;
+  double? _gestureFeedbackProgress;
+  Timer? _gestureFeedbackTimer;
 
   // Custom Player Controls State (Moko Monochrome)
   bool _isScrubbing = false;
@@ -140,9 +156,6 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
     }
     return '';
   }
-
-  // Real-time session delta tracking untuk genre role watch duration
-  int _sessionWatchSeconds = 0;
 
   // Track last stream URL untuk skip re-init kalau sama
   String? _lastStreamUrl;
@@ -420,7 +433,9 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
   @override
   void deactivate() {
     // Dipanggil seketika saat route/screen dicopot dari widget tree
+    _playerSessionId++;
     _pausePlayer();
+    _stopAndDisposePlayer();
     super.deactivate();
   }
 
@@ -437,14 +452,17 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
 
   @override
   void didPushNext() {
-    // Biarkan video tetap berjalan jika user hanya membuka modal/sheet di dalam player,
-    // dan jangan langsung matikan state secara agresif.
+    // Layar lain dibuka di atas layar player (misal detail, profil, komik, notifikasi)
+    // Otomatis pause video agar tidak berjalan di background saat user tidak menonton!
+    _pausePlayer();
   }
 
   @override
   void didPop() {
     // Layar pemutar video ditutup/pop
+    _playerSessionId++;
     _pausePlayer();
+    _stopAndDisposePlayer();
     PipService.instance.disablePipNow();
   }
 
@@ -639,8 +657,11 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
 
   @override
   void dispose() {
+    _playerSessionId++;
     _overlayHideTimer?.cancel();
     _seekFeedbackTimer?.cancel();
+    _gestureFeedbackTimer?.cancel();
+    PipService.instance.setBrightness(-1.0);
     _pendingRelativeSeekTimer?.cancel();
     _bufferingWatchdogTimer?.cancel();
     _bufferingDebounceTimer?.cancel();
@@ -700,8 +721,9 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
     return null;
   }
 
-  Future<void> _loadStream({Duration startAt = Duration.zero}) async {
+  Future<void> _loadStream({Duration startAt = Duration.zero, bool autoPlay = true}) async {
     if (_isDisposing) return;
+    final int session = _playerSessionId;
     setState(() {
       _loading = true;
       _error = null;
@@ -731,6 +753,7 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
             episodeUrl: _currentEpisodeUrl,
             episodeLabel: _currentEpisodeLabel,
           );
+          if (!mounted || _isDisposing || _playerSessionId != session) return;
           if (savedSec != null && savedSec > 0) {
             targetStartAt = Duration(seconds: savedSec);
           }
@@ -792,6 +815,7 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
           seriesSlug: seriesSlug,
           episodeNumber: epNum,
         );
+        if (!mounted || _isDisposing || _playerSessionId != session) return;
         if (resolved != null && resolved.isNotEmpty) {
           ylnimeEpUrl = resolved;
           _currentEpisodeUrl = resolved;
@@ -802,6 +826,7 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
       if (ylnimeEpUrl != null && ylnimeEpUrl.isNotEmpty) {
         // ⚡ Langsung panggil GET /ylnime/episode untuk memutar video super cepat
         yStream = await _repo.ylnimeEpisode(ylnimeEpUrl, seriesSlug: seriesSlug, quality: _selectedQuality);
+        if (!mounted || _isDisposing || _playerSessionId != session) return;
       }
 
       // 🔥 RESCUE FALLBACK: Jika stream masih kosong/gagal (misal link lama kadaluarsa atau hash berubah), resolve ulang URL episode fresh!
@@ -812,24 +837,26 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
           seriesSlug: seriesSlug,
           episodeNumber: epNum,
         );
+        if (!mounted || _isDisposing || _playerSessionId != session) return;
         if (freshResolved != null && freshResolved.isNotEmpty && freshResolved != ylnimeEpUrl) {
           debugPrint('[Stream] Found fresh episode URL: $freshResolved (was: $ylnimeEpUrl)');
           ylnimeEpUrl = freshResolved;
           _currentEpisodeUrl = freshResolved;
           yStream = await _repo.ylnimeEpisode(ylnimeEpUrl, seriesSlug: seriesSlug, quality: _selectedQuality);
+          if (!mounted || _isDisposing || _playerSessionId != session) return;
         }
       }
 
       if (yStream != null && (yStream.qualities.isNotEmpty || yStream.bestPlayable != null)) {
         debugPrint('[Stream] Got stream from YLnime (qualities: ${yStream.qualities.length}, best: ${yStream.bestPlayable?.server})');
-        if (!mounted || _isDisposing) return;
+        if (!mounted || _isDisposing || _playerSessionId != session) return;
         setState(() {
           _ylnimeStream = yStream;
           _isUsingFallback = false;
           _selectedServerIndex = 0;
           _isPlayerInitializing = false;
         });
-        await _applyVideoSource(startAt: targetStartAt);
+        await _applyVideoSource(startAt: targetStartAt, autoPlay: autoPlay);
         return;
       }
 
@@ -838,7 +865,7 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
       // Fallback ke API internal
       if (_currentEpisodeId.isEmpty || _currentEpisodeId.startsWith('http')) {
         // Tidak ada ID episode valid untuk fallback
-        if (!mounted || _isDisposing) return;
+        if (!mounted || _isDisposing || _playerSessionId != session) return;
         setState(() {
           _isUsingFallback = true;
           _error = 'Tidak dapat memuat stream video dari server utama dan tidak ada ID episode cadangan.';
@@ -850,7 +877,7 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
 
       try {
         final fallback = await _repo.episode(_currentEpisodeId);
-        if (!mounted || _isDisposing) return;
+        if (!mounted || _isDisposing || _playerSessionId != session) return;
         if (fallback.mirrors.isEmpty && fallback.streams.isEmpty &&
             (fallback.defaultStreamingUrl == null || fallback.defaultStreamingUrl!.isEmpty)) {
           // Fallback juga kosong
@@ -867,10 +894,10 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
           _fallbackStream = fallback;
           _isPlayerInitializing = true;
         });
-        await _applyFallbackSource(startAt: targetStartAt);
+        await _applyFallbackSource(startAt: targetStartAt, autoPlay: autoPlay);
       } catch (fallbackErr) {
         debugPrint('[Stream] Fallback also failed: $fallbackErr');
-        if (!mounted || _isDisposing) return;
+        if (!mounted || _isDisposing || _playerSessionId != session) return;
         setState(() {
           _isUsingFallback = true;
           _error = 'Gagal memuat video (Server utama & cadangan bermasalah: ${AppErrorFormatter.formatVideoError(fallbackErr)}). Silakan ganti server atau coba beberapa saat lagi.';
@@ -1010,8 +1037,9 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
     return label;
   }
 
-  Future<void> _applyVideoSource({Duration startAt = Duration.zero}) async {
+  Future<void> _applyVideoSource({Duration startAt = Duration.zero, bool autoPlay = true}) async {
     if (_isDisposing) return;
+    final int session = _playerSessionId;
     if (_ylnimeStream == null || (_ylnimeStream!.qualities.isEmpty && _ylnimeStream!.bestPlayable == null)) {
       debugPrint('[Stream] Cannot apply: no stream or empty qualities');
       return;
@@ -1025,7 +1053,7 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
       if (best != null && best.url.isNotEmpty && !best.url.contains(r'${')) {
         _selectedServerIndex = 0;
         _selectedServerNotifier.value = _formatServerLabel(best.server, 0);
-        await _initializePlayer(best.url, startAt: startAt);
+        await _initializePlayer(best.url, startAt: startAt, autoPlay: autoPlay, sessionId: session);
       } else {
         debugPrint('[Stream] Server list empty for ${targetQuality.title}');
       }
@@ -1052,8 +1080,10 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
     final success = await _initializePlayer(
       selectedServer.url,
       startAt: startAt,
+      autoPlay: autoPlay,
+      sessionId: session,
     );
-    if (!success && mounted && !_isDisposing) {
+    if (!success && mounted && !_isDisposing && _playerSessionId == session) {
       setState(() {
         _isPlayerInitializing = false;
         _qualityLoading = false;
@@ -1064,8 +1094,9 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
   }
 
   // 🔥 FIX: Sama untuk fallback
-  Future<void> _applyFallbackSource({Duration startAt = Duration.zero}) async {
+  Future<void> _applyFallbackSource({Duration startAt = Duration.zero, bool autoPlay = true}) async {
     if (_isDisposing) return;
+    final int session = _playerSessionId;
     if (_fallbackStream == null) return;
 
     String? url;
@@ -1086,8 +1117,13 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
     }
 
     if (url != null && url.isNotEmpty) {
-      final success = await _initializePlayer(url, startAt: startAt);
-      if (!success && mounted && !_isDisposing) {
+      final success = await _initializePlayer(
+        url,
+        startAt: startAt,
+        autoPlay: autoPlay,
+        sessionId: session,
+      );
+      if (!success && mounted && !_isDisposing && _playerSessionId == session) {
         setState(() {
           _isPlayerInitializing = false;
           _qualityLoading = false;
@@ -1177,9 +1213,11 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
     final url = _lastStreamUrl;
     if (url == null || url.isEmpty) return;
     final currentPos = _positionNotifier.value;
+    final wasPlaying = _isPlayingNotifier.value;
+    final session = _playerSessionId;
     debugPrint('[AnimePlayer Watchdog] Reconnecting stream at $currentPos...');
     _cancelBufferingWatchdog();
-    await _initializePlayer(url, startAt: currentPos);
+    await _initializePlayer(url, startAt: currentPos, autoPlay: wasPlaying, sessionId: session);
   }
 
   void _onVideoPlayerUpdate() {
@@ -1201,9 +1239,11 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
           !_isDisposing) {
         _hasAttemptedProxyFallback = true;
         final curPos = _positionNotifier.value;
+        final wasPlaying = _isPlayingNotifier.value;
+        final session = _playerSessionId;
         final proxyUrl = '${ApiConfig.apiBase}/ylnime/stream-proxy?url=${Uri.encodeQueryComponent(_lastStreamUrl!)}';
         debugPrint('[VideoPlayer Error] Auto-fallback to stream-proxy: $proxyUrl at $curPos');
-        _initializePlayer(proxyUrl, startAt: curPos);
+        _initializePlayer(proxyUrl, startAt: curPos, autoPlay: wasPlaying, sessionId: session);
         return;
       }
       if (mounted) {
@@ -1290,12 +1330,16 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
         _isWatched = true;
       }
 
-      if (dur > const Duration(seconds: 15) &&
-          pos >= dur - const Duration(seconds: 1) &&
-          !value.isLooping) {
+      final isNearEnd = dur > const Duration(seconds: 15) &&
+          !value.isLooping &&
+          (pos >= dur - const Duration(milliseconds: 1500) ||
+              (!value.isPlaying && pos >= dur - const Duration(seconds: 4) && pos > Duration.zero));
+
+      if (isNearEnd) {
         if (!_isCompletedHandled) {
           _isCompletedHandled = true;
           unawaited(_recordHistory(isCompleted: true, force: true));
+          _triggerMalScrobble(isCompleted: true);
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted && !_isDisposing) {
               _nextEpisode();
@@ -1310,8 +1354,11 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
   Future<bool> _initializePlayer(
     String videoUrl, {
     Duration startAt = Duration.zero,
+    bool autoPlay = true,
+    int? sessionId,
   }) async {
-    if (!mounted || _isDisposing) return false;
+    final int session = sessionId ?? _playerSessionId;
+    if (!mounted || _isDisposing || _playerSessionId != session) return false;
 
     final directStreamUrl = _resolveDirectVideoUrl(videoUrl);
     final cleanedDirect = _cleanStreamUrl(directStreamUrl);
@@ -1331,6 +1378,7 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
     final streamHeaders = _getHeadersForUrl(cleanedDirect);
 
     await _stopAndDisposePlayer();
+    if (!mounted || _isDisposing || _playerSessionId != session) return false;
 
     if (mounted) {
       setState(() {
@@ -1345,13 +1393,13 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
       _hasAttemptedProxyFallback = false;
     }
     final testUrl = cleanedDirect;
-    debugPrint('[AnimePlayer] Attempting VideoPlayer/Chewie init with: $testUrl (startAt: $startAt)');
+    debugPrint('[AnimePlayer] Attempting VideoPlayer/Chewie init with: $testUrl (startAt: $startAt, autoPlay: $autoPlay, session: $session)');
     _lastStreamUrl = testUrl;
 
     try {
       final vp = VideoPlayerController.networkUrl(
         Uri.parse(testUrl),
-        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: false),
         httpHeaders: streamHeaders.isNotEmpty ? streamHeaders : const {},
       );
 
@@ -1363,8 +1411,12 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
         onTimeout: () => throw TimeoutException('Inisialisasi player timeout setelah 15 detik'),
       );
 
-      if (!mounted || _isDisposing) {
-        await vp.dispose();
+      if (!mounted || _isDisposing || _playerSessionId != session) {
+        try {
+          vp.removeListener(_onVideoPlayerUpdate);
+          await vp.pause();
+          await vp.dispose();
+        } catch (_) {}
         return false;
       }
 
@@ -1384,7 +1436,13 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
 
       PipService.instance.registerActivePlayer(onPause: _pausePlayer);
 
-      await vp.play();
+      if (autoPlay && mounted && !_isDisposing && _playerSessionId == session) {
+        await vp.play();
+      } else {
+        try {
+          await vp.pause();
+        } catch (_) {}
+      }
 
       if (mounted) {
         setState(() {
@@ -1396,19 +1454,20 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
         });
         _startOverlayTimer();
         WakelockPlus.enable();
+        _triggerMalScrobble();
       }
       return true;
     } catch (e) {
       debugPrint('[AnimePlayer] VideoPlayer init failed for $testUrl: $e');
 
       // ⚡ Fallback ke stream-proxy jika direct URL gagal (misal diblokir ISP / SSL / decoder HP lama)
-      if (!testUrl.contains('/stream-proxy')) {
+      if (!testUrl.contains('/stream-proxy') && mounted && !_isDisposing && _playerSessionId == session) {
         final proxyUrl = '${ApiConfig.apiBase}/ylnime/stream-proxy?url=${Uri.encodeQueryComponent(testUrl)}';
         debugPrint('[AnimePlayer] Direct stream failed, attempting proxy URL: $proxyUrl');
         try {
           final pVp = VideoPlayerController.networkUrl(
             Uri.parse(proxyUrl),
-            videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+            videoPlayerOptions: VideoPlayerOptions(mixWithOthers: false),
             httpHeaders: streamHeaders.isNotEmpty ? streamHeaders : const {},
           );
           _videoPlayerController = pVp;
@@ -1417,15 +1476,29 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
             const Duration(seconds: 15),
             onTimeout: () => throw TimeoutException('Inisialisasi proxy player timeout setelah 15 detik'),
           );
-          if (mounted && !_isDisposing) {
-            if (_playbackSpeed != 1.0) {
-              try { await pVp.setPlaybackSpeed(_playbackSpeed); } catch (_) {}
-            }
-            if (startAt > Duration.zero) {
-              try { await pVp.seekTo(startAt); } catch (_) {}
-            }
-            PipService.instance.registerActivePlayer(onPause: _pausePlayer);
+          if (!mounted || _isDisposing || _playerSessionId != session) {
+            try {
+              pVp.removeListener(_onVideoPlayerUpdate);
+              await pVp.pause();
+              await pVp.dispose();
+            } catch (_) {}
+            return false;
+          }
+          if (_playbackSpeed != 1.0) {
+            try { await pVp.setPlaybackSpeed(_playbackSpeed); } catch (_) {}
+          }
+          if (startAt > Duration.zero) {
+            try { await pVp.seekTo(startAt); } catch (_) {}
+          }
+          PipService.instance.registerActivePlayer(onPause: _pausePlayer);
+          if (autoPlay && mounted && !_isDisposing && _playerSessionId == session) {
             await pVp.play();
+          } else {
+            try {
+              await pVp.pause();
+            } catch (_) {}
+          }
+          if (mounted) {
             setState(() {
               _isPlayerInitializing = false;
               _qualityLoading = false;
@@ -1435,8 +1508,9 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
             });
             _startOverlayTimer();
             WakelockPlus.enable();
-            return true;
+            _triggerMalScrobble();
           }
+          return true;
         } catch (proxyErr) {
           debugPrint('[AnimePlayer] Proxy fallback also failed: $proxyErr');
         }
@@ -1454,13 +1528,28 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
   }
 
   int get _displayEpisodeNumber {
+    // 1. Coba ambil dari model episode aktif jika ada field episodeNumber
+    if (_episodes.isNotEmpty && _currentEpisodeIndex >= 0 && _currentEpisodeIndex < _episodes.length) {
+      final epModel = _episodes[_currentEpisodeIndex];
+      if (epModel.episodeNumber != null && epModel.episodeNumber!.trim().isNotEmpty) {
+        final parsed = int.tryParse(epModel.episodeNumber!.trim());
+        if (parsed != null && parsed > 0) return parsed;
+      }
+    }
+    // 2. Ekstrak dari label episode saat ini
     final ep = _extractEpisodeNumber(_currentEpisodeLabel);
     if (ep != null && ep > 0) return ep;
+    // 3. Ekstrak dari url episode
     if (_currentEpisodeUrl != null) {
       final match = RegExp(r'episode=al-\d+-(\d+)').firstMatch(_currentEpisodeUrl!);
       if (match != null) {
-        return int.tryParse(match.group(1)!) ?? (_currentEpisodeIndex + 1);
+        final parsed = int.tryParse(match.group(1)!);
+        if (parsed != null && parsed > 0) return parsed;
       }
+    }
+    // 4. Periksa apakah urutan list episode descending (Episode terbesar di index 0)
+    if (_isEpisodesDescending && _episodes.isNotEmpty) {
+      return (_episodes.length - _currentEpisodeIndex).clamp(1, 99999);
     }
     return _currentEpisodeIndex + 1;
   }
@@ -1524,6 +1613,10 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
     HapticFeedback.selectionClick();
     debugPrint('[Quality] Switch to $quality (preferred saved)');
 
+    final bool wasPlaying = _videoPlayerController?.value.isPlaying ?? false;
+    final int session = _playerSessionId;
+    final String targetEpUrl = _currentEpisodeUrl ?? '';
+
     Duration currentPos = Duration.zero;
     if (_videoPlayerController != null && _videoPlayerController!.value.isInitialized) {
       currentPos = _videoPlayerController!.value.position;
@@ -1551,12 +1644,14 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
     // ⚡ Watchdog 12 detik agar loading overlay TIDAK PERNAH NYANGKUT
     Timer? qualityTimeoutWatchdog;
     qualityTimeoutWatchdog = Timer(const Duration(seconds: 12), () {
-      if (mounted && _qualityLoading) {
+      if (mounted && _qualityLoading && _playerSessionId == session) {
         debugPrint('[Quality] Watchdog: switch quality timed out after 12s');
         setState(() => _qualityLoading = false);
-        try {
-          _videoPlayerController?.play();
-        } catch (_) {}
+        if (wasPlaying) {
+          try {
+            _videoPlayerController?.play();
+          } catch (_) {}
+        }
       }
     });
 
@@ -1585,6 +1680,10 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
           if (validServers.isNotEmpty) {
             debugPrint('[Quality] Instant switch to ${match.title}');
 
+            if (!mounted || _isDisposing || _playerSessionId != session || _currentEpisodeUrl != targetEpUrl) {
+              return;
+            }
+
             _lastStreamUrl = null;
 
             final keepIndex = (_selectedServerIndex < validServers.length) ? _selectedServerIndex : 0;
@@ -1597,8 +1696,8 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
               _selectedServerNotifier.value = _formatServerLabel(validServers[keepIndex].server, keepIndex);
             });
 
-            await _applyVideoSource(startAt: currentPos);
-            if (mounted) {
+            await _applyVideoSource(startAt: currentPos, autoPlay: wasPlaying);
+            if (mounted && _playerSessionId == session) {
               ScaffoldMessenger.of(context).hideCurrentSnackBar();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -1625,9 +1724,12 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
           seriesSlug: seriesSlug,
         ).timeout(const Duration(seconds: 12), onTimeout: () => null);
 
-        if (newStream != null && (newStream.qualities.isNotEmpty || newStream.bestPlayable != null)) {
-          if (!mounted || _isDisposing) return;
+        if (!mounted || _isDisposing || _playerSessionId != session || _currentEpisodeUrl != targetEpUrl) {
+          debugPrint('[Quality] Quality response discarded: session or episode changed');
+          return;
+        }
 
+        if (newStream != null && (newStream.qualities.isNotEmpty || newStream.bestPlayable != null)) {
           final effectiveQuality = newStream.resoDipakai ?? quality;
 
           if (newStream.resoFallback && mounted) {
@@ -1686,8 +1788,8 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
             _preferredQuality = effectiveQuality;
           });
 
-          await _applyVideoSource(startAt: currentPos);
-          if (mounted) {
+          await _applyVideoSource(startAt: currentPos, autoPlay: wasPlaying);
+          if (mounted && _playerSessionId == session) {
             final currentServerName = _selectedServerNotifier.value;
             ScaffoldMessenger.of(context).hideCurrentSnackBar();
             ScaffoldMessenger.of(context).showSnackBar(
@@ -1702,7 +1804,7 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
         }
       }
 
-      if (mounted && !_isDisposing) {
+      if (mounted && !_isDisposing && _playerSessionId == session) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1710,15 +1812,17 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
             behavior: SnackBarBehavior.floating,
           ),
         );
-        try {
-          _videoPlayerController?.play();
-        } catch (_) {}
+        if (wasPlaying) {
+          try {
+            _videoPlayerController?.play();
+          } catch (_) {}
+        }
       }
     } catch (e) {
       debugPrint('[Quality] Error during switch: $e');
     } finally {
       qualityTimeoutWatchdog.cancel();
-      if (mounted && !_isDisposing) {
+      if (mounted && !_isDisposing && _playerSessionId == session) {
         setState(() => _qualityLoading = false);
       }
     }
@@ -1729,6 +1833,9 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
     if (_selectedServerIndex == index && _error == null) return;
     HapticFeedback.selectionClick();
     debugPrint('[Server] Switch to index $index');
+
+    final bool wasPlaying = _videoPlayerController?.value.isPlaying ?? false;
+    final int session = ++_playerSessionId;
 
     // Matikan video lama SEGERA!
     try {
@@ -1751,12 +1858,38 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
     }
 
     if (_ylnimeStream != null && _ylnimeStream!.qualities.isNotEmpty) {
-      _applyVideoSource(startAt: currentPos);
+      _applyVideoSource(startAt: currentPos, autoPlay: wasPlaying);
     } else if (_fallbackStream != null && _fallbackStream!.mirrors.isNotEmpty) {
       final m = _fallbackStream!.mirrors[index];
       _selectedServerNotifier.value = m.label;
-      _initializePlayer(m.url, startAt: currentPos);
+      _initializePlayer(m.url, startAt: currentPos, autoPlay: wasPlaying, sessionId: session);
     }
+  }
+
+  void _triggerMalScrobble({bool isCompleted = false}) {
+    if (!MalService.instance.isConnected || !MalService.instance.isAutoScrobbleEnabled) return;
+    final epNum = _displayEpisodeNumber;
+    final title = (widget.animeTitle != null && widget.animeTitle!.isNotEmpty)
+        ? widget.animeTitle!
+        : (_ylnimeStream?.seriesName ?? _fallbackStream?.animeTitle ?? '');
+    if (title.isEmpty || epNum <= 0) return;
+
+    final animeId = _effectiveAnimeId.isNotEmpty
+        ? _effectiveAnimeId
+        : ((widget.animeId ?? '').isNotEmpty
+            ? widget.animeId!
+            : (_fallbackStream?.animeId ?? ''));
+
+    debugPrint('[AnimePlayer] Menjalankan Auto-Scrobble MAL: $title (ID: $animeId) Eps $epNum (isCompleted: $isCompleted)');
+    unawaited(
+      MalService.instance.scrobbleEpisode(
+        animeTitle: title,
+        animeId: animeId.isNotEmpty ? animeId : null,
+        episodeNumber: epNum,
+        isCompleted: isCompleted,
+        totalEpisodes: _episodes.isNotEmpty ? _episodes.length : null,
+      ),
+    );
   }
 
   Future<void> _recordHistory({bool? isCompleted, bool force = false}) async {
@@ -1821,19 +1954,20 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
       await _progressService.removeAnimeHistory(animeId);
     }
 
-    _sessionWatchSeconds = 0;
+    // 3. AUTO-SCROBBLE KE MYANIMELIST (Selalu jalan terpisah & independen)
+    _triggerMalScrobble(isCompleted: isCompleted == true);
   }
 
   void _playEpisode(EpisodeModel ep, int index) async {
     if (_isDisposing) return;
     HapticFeedback.selectionClick();
 
-    if (_sessionWatchSeconds > 0) {
-      unawaited(_recordHistory(force: true));
-    }
+    _playerSessionId++;
+    _qualityLoading = false;
+
+    unawaited(_recordHistory(force: true));
 
     _lastStreamUrl = null;
-    _sessionWatchSeconds = 0;
 
     setState(() {
       _currentEpisodeId = ep.id;
@@ -1860,8 +1994,9 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
     if (!mounted || _isDisposing) return;
 
     _scrollToCurrentEpisode();
-    _loadStream(startAt: Duration.zero);
+    _loadStream(startAt: Duration.zero, autoPlay: true);
     unawaited(_recordHistory(force: true));
+    _triggerMalScrobble();
   }
 
   bool get _hasNextEpisode {
@@ -1926,6 +2061,8 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
   Future<void> _stopCurrentAndLoadNext(String nextUrl) async {
     if (_isDisposing) return;
 
+    _playerSessionId++;
+    _qualityLoading = false;
     _lastStreamUrl = null;
 
     setState(() {
@@ -1951,7 +2088,7 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
 
     if (!mounted || _isDisposing) return;
 
-    _loadStream();
+    _loadStream(autoPlay: true);
   }
 
 
@@ -2410,14 +2547,38 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
 
   Future<void> _toggleFullScreen() async {
     final nextFullscreen = !_isFullscreen;
+    final now = DateTime.now();
+    _lastFullscreenToggleTime = now;
+    _ignoreSwipeFullscreenUntil = now.add(const Duration(milliseconds: 1600));
+
     setState(() {
       _isFullscreen = nextFullscreen;
     });
     if (nextFullscreen) {
       await PipService.instance.enterFullscreen();
     } else {
+      _screenBrightness = 1.0;
+      PipService.instance.setBrightness(-1.0);
+      _gestureFeedbackProgress = null;
+      _gestureFeedbackTimer?.cancel();
       await PipService.instance.exitFullscreen();
     }
+  }
+
+  void _triggerSwipeFullscreen() {
+    if (_isFullscreen || _isTextEditingActive()) return;
+    final now = DateTime.now();
+    if (_ignoreSwipeFullscreenUntil != null && now.isBefore(_ignoreSwipeFullscreenUntil!)) {
+      return;
+    }
+    if (_lastFullscreenToggleTime != null &&
+        now.difference(_lastFullscreenToggleTime!).inMilliseconds < 1600) {
+      return;
+    }
+    _lastFullscreenToggleTime = now;
+    _ignoreSwipeFullscreenUntil = now.add(const Duration(milliseconds: 1600));
+    HapticFeedback.mediumImpact();
+    _toggleFullScreen();
   }
 
   bool _isTextEditingActive() {
@@ -2591,7 +2752,11 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
 
         return LayoutBuilder(
           builder: (context, constraints) {
-            final isDesktop = constraints.maxWidth >= 900;
+            final isDesktop = !kIsWeb &&
+                (defaultTargetPlatform == TargetPlatform.windows ||
+                 defaultTargetPlatform == TargetPlatform.macOS ||
+                 defaultTargetPlatform == TargetPlatform.linux) &&
+                constraints.maxWidth >= 900;
 
             if (isDesktop) {
               return Scaffold(
@@ -2688,17 +2853,51 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
                     if (_error != null && !_loading && !_isActuallyPlaying)
                       _buildErrorBanner(isDark),
                     Expanded(
-                      child: ListView(
-                        controller: _scrollController,
-                        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-                        scrollCacheExtent: const ScrollCacheExtent.pixels(350.0),
-                        padding: EdgeInsets.fromLTRB(0, 0, 0, 50 + bottomInset),
-                        children: [
-                          RepaintBoundary(child: _buildHeroTitleSection(isDark)),
-                          RepaintBoundary(child: _buildTopActionBar(isDark)),
-                          const SizedBox(height: 8),
-                          RepaintBoundary(child: _buildCommentsSection(context, isDark)),
-                        ],
+                      child: NotificationListener<ScrollNotification>(
+                        onNotification: (notification) {
+                          if (_isFullscreen || _isTextEditingActive()) return false;
+                          final now = DateTime.now();
+                          if (_ignoreSwipeFullscreenUntil != null && now.isBefore(_ignoreSwipeFullscreenUntil!)) {
+                            return false;
+                          }
+
+                          // Hanya trigger fullscreen jika ditarik ke bawah secara sengaja oleh sentuhan jari user (dragDetails != null)
+                          // Membutuhkan tarikan overscroll minimal 65-70px ke bawah (seperti pull-to-refresh)
+                          if (notification is OverscrollNotification) {
+                            if (notification.dragDetails != null && notification.overscroll < -60.0) {
+                              _triggerSwipeFullscreen();
+                              return true;
+                            }
+                          }
+                          if (notification is ScrollUpdateNotification) {
+                            final pixels = notification.metrics.pixels;
+                            // Harus benar-benar ditarik melampaui batas atas (overscroll mantap) oleh jari user
+                            if (notification.dragDetails != null && pixels < -70.0) {
+                              _triggerSwipeFullscreen();
+                              return true;
+                            }
+                          }
+                          if (notification is ScrollEndNotification) {
+                            final pixels = notification.metrics.pixels;
+                            if (notification.dragDetails != null && pixels < -50.0) {
+                              _triggerSwipeFullscreen();
+                              return true;
+                            }
+                          }
+                          return false;
+                        },
+                        child: ListView(
+                          controller: _scrollController,
+                          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                          scrollCacheExtent: const ScrollCacheExtent.pixels(350.0),
+                          padding: EdgeInsets.fromLTRB(0, 0, 0, 50 + bottomInset),
+                          children: [
+                            RepaintBoundary(child: _buildHeroTitleSection(isDark)),
+                            RepaintBoundary(child: _buildTopActionBar(isDark)),
+                            const SizedBox(height: 8),
+                            RepaintBoundary(child: _buildCommentsSection(context, isDark)),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -2832,38 +3031,223 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
 
   double _verticalDragDistance = 0.0;
 
+  void _showGestureFeedback({
+    required IconData icon,
+    required String label,
+    required double progress,
+  }) {
+    _gestureFeedbackTimer?.cancel();
+    setState(() {
+      _gestureFeedbackIcon = icon;
+      _gestureFeedbackLabel = label;
+      _gestureFeedbackProgress = progress;
+    });
+  }
+
+  void _hideGestureFeedbackWithDelay() {
+    _gestureFeedbackTimer?.cancel();
+    _gestureFeedbackTimer = Timer(const Duration(milliseconds: 900), () {
+      if (mounted) {
+        setState(() {
+          _gestureFeedbackProgress = null;
+          _gestureFeedbackLabel = null;
+          _gestureFeedbackIcon = null;
+        });
+      }
+    });
+  }
+
+  Widget _buildGestureFeedbackOverlay() {
+    if (_gestureFeedbackProgress == null) return const SizedBox.shrink();
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.82),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.16),
+            width: 0.8,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.45),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _gestureFeedbackIcon ?? CupertinoIcons.speaker_2_fill,
+              color: Colors.white,
+              size: 32,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _gestureFeedbackLabel ?? '',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.2,
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: 130,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(5),
+                child: LinearProgressIndicator(
+                  value: _gestureFeedbackProgress,
+                  minHeight: 5,
+                  backgroundColor: Colors.white.withValues(alpha: 0.22),
+                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _handleVerticalDragStart(DragStartDetails details) {
     if (_isScreenLockedNotifier.value) return;
-    if (_isScrubbing) return;
+    if (_isScrubbing || _isHoldingForSpeed) return;
     _verticalDragDistance = 0.0;
+
+    if (_isFullscreen) {
+      final screenWidth = MediaQuery.of(context).size.width;
+      final touchX = details.globalPosition.dx;
+      // Layar sebelah kiri: Kecerahan (Brightness), Layar sebelah kanan: Volume
+      if (touchX < screenWidth * 0.5) {
+        _fullscreenDragSide = 1; // Brightness
+        _fullscreenDragInitialVal = _screenBrightness;
+      } else {
+        _fullscreenDragSide = 2; // Volume
+        _fullscreenDragInitialVal = _videoPlayerController?.value.volume ?? 1.0;
+      }
+      _fullscreenDragStartY = details.globalPosition.dy;
+      _fullscreenDragThresholdPassed = false;
+    }
   }
 
   void _handleVerticalDragUpdate(DragUpdateDetails details) {
     if (_isScreenLockedNotifier.value) return;
-    if (_isScrubbing) return;
+    if (_isScrubbing || _isHoldingForSpeed) return;
     _verticalDragDistance += details.primaryDelta ?? 0.0;
+
+    if (_isFullscreen && _fullscreenDragSide != 0) {
+      final totalDeltaY = details.globalPosition.dy - _fullscreenDragStartY;
+
+      // iOS Deadzone: Abaikan gesekan mikro di bawah 16px agar tidak sensitif
+      if (!_fullscreenDragThresholdPassed) {
+        if (totalDeltaY.abs() >= 16.0) {
+          _fullscreenDragThresholdPassed = true;
+          _fullscreenDragStartY = details.globalPosition.dy;
+        } else {
+          return;
+        }
+      }
+
+      // Sensitivitas halus iOS: Gesekan ~300px mewakili rentang 0% - 100%
+      final currentDeltaY = -(details.globalPosition.dy - _fullscreenDragStartY);
+      final changeRatio = currentDeltaY / 300.0;
+
+      if (_fullscreenDragSide == 2) {
+        // Kontrol Volume (Layar Kanan)
+        if (_videoPlayerController == null) return;
+        final nextVol = (_fullscreenDragInitialVal + changeRatio).clamp(0.0, 1.0);
+        _videoPlayerController!.setVolume(nextVol);
+        if (nextVol > 0) _lastVolumeBeforeMute = nextVol;
+
+        final IconData volIcon;
+        if (nextVol == 0.0) {
+          volIcon = CupertinoIcons.speaker_slash_fill;
+        } else if (nextVol < 0.35) {
+          volIcon = CupertinoIcons.speaker_fill;
+        } else if (nextVol < 0.7) {
+          volIcon = CupertinoIcons.speaker_1_fill;
+        } else {
+          volIcon = CupertinoIcons.speaker_2_fill;
+        }
+
+        _showGestureFeedback(
+          icon: volIcon,
+          label: 'Volume %',
+          progress: nextVol,
+        );
+      } else if (_fullscreenDragSide == 1) {
+        // Kontrol Kecerahan (Layar Kiri)
+        final nextBri = (_fullscreenDragInitialVal + changeRatio).clamp(0.08, 1.0);
+        _screenBrightness = nextBri;
+        PipService.instance.setBrightness(nextBri);
+        setState(() {}); // perbarui overlay layar gelap
+
+        final briIcon = nextBri < 0.5 ? CupertinoIcons.sun_min_fill : CupertinoIcons.sun_max_fill;
+        _showGestureFeedback(
+          icon: briIcon,
+          label: 'Kecerahan %',
+          progress: nextBri,
+        );
+      }
+    }
   }
 
   void _handleVerticalDragEnd(DragEndDetails details) {
     if (_isScreenLockedNotifier.value) return;
-    if (_isScrubbing) return;
+    if (_isScrubbing || _isHoldingForSpeed) return;
 
-    final velocity = details.primaryVelocity ?? 0.0;
-    // Geser kebawah: tarikan positif atau kecepatan flick positif (>200)
-    final isSwipeDown = _verticalDragDistance > 40.0 || velocity > 200.0;
-    // Geser keatas: tarikan negatif atau kecepatan flick negatif (<-200)
-    final isSwipeUp = _verticalDragDistance < -40.0 || velocity < -200.0;
+    if (_isFullscreen) {
+      if (_fullscreenDragThresholdPassed) {
+        _fullscreenDragSide = 0;
+        _fullscreenDragThresholdPassed = false;
+        _hideGestureFeedbackWithDelay();
+        _verticalDragDistance = 0.0;
+        return;
+      }
+      _fullscreenDragSide = 0;
+      _fullscreenDragThresholdPassed = false;
+      _hideGestureFeedbackWithDelay();
 
-    if (!_isFullscreen) {
-      // Pada halaman nonton biasa, geser kebawah (atau keatas) langsung masuk fullscreen
-      if (isSwipeDown || isSwipeUp) {
-        HapticFeedback.mediumImpact();
+      final velocity = details.primaryVelocity ?? 0.0;
+      final now = DateTime.now();
+
+      // Debounce agar tidak terpicu ganda
+      if (_lastFullscreenToggleTime != null &&
+          now.difference(_lastFullscreenToggleTime!).inMilliseconds < 800) {
+        _verticalDragDistance = 0.0;
+        return;
+      }
+
+      // Saat fullscreen: keluar jika ditarik ke bawah sangat sengaja (pull-down > 120px)
+      final isDeliberateSwipeDown = (_verticalDragDistance >= 120.0 && velocity >= 600.0);
+      if (isDeliberateSwipeDown) {
+        _lastFullscreenToggleTime = now;
+        HapticFeedback.lightImpact();
         _toggleFullScreen();
       }
     } else {
-      // Saat sedang fullscreen, geser kebawah atau keatas untuk keluar dari fullscreen
-      if (isSwipeDown || isSwipeUp) {
-        HapticFeedback.lightImpact();
+      // Pada halaman nonton biasa (portrait):
+      final velocity = details.primaryVelocity ?? 0.0;
+      final now = DateTime.now();
+      if (_lastFullscreenToggleTime != null &&
+          now.difference(_lastFullscreenToggleTime!).inMilliseconds < 800) {
+        _verticalDragDistance = 0.0;
+        return;
+      }
+
+      final isDeliberateSwipeUp = (_verticalDragDistance <= -80.0 && velocity <= 0.0) ||
+          (_verticalDragDistance <= -50.0 && velocity <= -500.0);
+      final isDeliberateSwipeDown = (_verticalDragDistance >= 95.0 && velocity >= 0.0) ||
+          (_verticalDragDistance >= 55.0 && velocity <= 500.0);
+
+      if (isDeliberateSwipeUp || isDeliberateSwipeDown) {
+        _lastFullscreenToggleTime = now;
+        HapticFeedback.mediumImpact();
         _toggleFullScreen();
       }
     }
@@ -2871,8 +3255,12 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
   }
 
   void _handleVerticalDragCancel() {
+    _fullscreenDragSide = 0;
+    _fullscreenDragThresholdPassed = false;
     _verticalDragDistance = 0.0;
+    _hideGestureFeedbackWithDelay();
   }
+
 
   void _handleLongPressCancel() {
     if (!_isHoldingForSpeed) return;
@@ -3898,7 +4286,7 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
         _videoPlayerController!.value.isInitialized) {
       final aspectRatio = _videoPlayerController!.value.aspectRatio;
       return Container(
-        key: const ValueKey('anime_video_box_container'),
+        key: _videoBoxGlobalKey,
         color: Colors.black,
         child: Stack(
           fit: StackFit.expand,
@@ -3909,6 +4297,14 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
                 child: VideoPlayer(_videoPlayerController!),
               ),
             ),
+            if (_isFullscreen && _screenBrightness < 1.0)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Container(
+                    color: Colors.black.withValues(alpha: ((1.0 - _screenBrightness) * 0.85).clamp(0.0, 0.85)),
+                  ),
+                ),
+              ),
             Positioned.fill(
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
@@ -3961,6 +4357,7 @@ class _AnimeEpisodePlayerScreenState extends State<AnimeEpisodePlayerScreen>
               _buildCustomControlsOverlay(),
             if (_isHoldingForSpeed)
               _buildSpeedHoldIndicator(),
+            _buildGestureFeedbackOverlay(),
           ],
         ),
       );

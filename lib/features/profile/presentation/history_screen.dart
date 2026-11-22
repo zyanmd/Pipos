@@ -10,7 +10,6 @@ import '../../../shared/widgets/common_widgets.dart';
 import '../../../shared/widgets/glass_container.dart';
 import '../../anime/data/anime_repository.dart';
 import '../../anime/data/models/anime_model.dart';
-import '../../anime/presentation/anime_episode_player.dart';
 import '../../../core/services/anime_watch_progress_service.dart';
 import '../../comic/data/comic_repository.dart';
 import '../../comic/data/models/comic_model.dart';
@@ -22,6 +21,7 @@ import '../../../core/utils/app_date_utils.dart';
 import '../../../shared/widgets/ad_banner_widget.dart';
 import '../../../shared/widgets/app_network_image.dart';
 import '../../../shared/widgets/smooth_entrance_transition.dart';
+import '../../nobar/presentation/widgets/watch_mode_sheet.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -536,18 +536,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
               }
 
               if (!mounted) return;
-              await Navigator.of(context, rootNavigator: true).push(
-                CupertinoPageRoute(
-                  builder: (_) => AnimeEpisodePlayerScreen(
-                    episodeId: epId,
-                    episodeLabel: m.formattedEpisode,
-                    episodeUrl: m.episodeUrl,
-                    animeId: m.animeId,
-                    animeTitle: m.animeTitle,
-                    animeThumb: thumb,
-                    startAt: m.currentTime > 0 ? Duration(seconds: m.currentTime) : Duration.zero,
-                  ),
-                ),
+              await showWatchModeSheet(
+                context: context,
+                animeId: m.animeId,
+                animeTitle: m.animeTitle,
+                animeThumb: thumb ?? '',
+                episodeId: epId,
+                episodeLabel: m.formattedEpisode,
+                episodeUrl: m.episodeUrl,
+                startAt: m.currentTime > 0 ? Duration(seconds: m.currentTime) : Duration.zero,
               );
               _load();
             },

@@ -237,12 +237,11 @@ class _ReviewClipPlayerWidgetState extends State<ReviewClipPlayerWidget>
     final cover = widget.review.targetCover;
     final hasActivePlayer = _controller != null && _controller!.value.isInitialized;
 
-    // Aspect ratio adaptif ala feed video Instagram & Facebook:
-    // Standar 16:9, jika video vertikal/portrait adaptif dibatasi max 4:5
+    // Aspect ratio adaptif: natural aspect ratio clamped to modern feed range (0.56 to 2.39)
     double targetAspectRatio = 16 / 9;
     if (hasActivePlayer) {
       final vRatio = _controller!.value.aspectRatio;
-      targetAspectRatio = vRatio > 0 ? vRatio.clamp(0.8, 1.78) : (16 / 9);
+      targetAspectRatio = vRatio > 0 ? vRatio.clamp(0.56, 2.39) : (16 / 9);
     }
 
     return ClipRRect(
@@ -272,14 +271,13 @@ class _ReviewClipPlayerWidgetState extends State<ReviewClipPlayerWidget>
             child: Stack(
               fit: StackFit.expand,
               children: [
-                // ── 1. Video Layer / Cover Thumbnail ──
+                // ── 1. Video Layer / Cover Thumbnail (Clean, Full, Tanpa UI) ──
                 if (hasActivePlayer)
-                  FittedBox(
-                    fit: BoxFit.cover,
-                    clipBehavior: Clip.hardEdge,
-                    child: SizedBox(
-                      width: _controller!.value.size.width,
-                      height: _controller!.value.size.height,
+                  Center(
+                    child: AspectRatio(
+                      aspectRatio: _controller!.value.aspectRatio > 0
+                          ? _controller!.value.aspectRatio
+                          : targetAspectRatio,
                       child: VideoPlayer(_controller!),
                     ),
                   )
@@ -293,135 +291,27 @@ class _ReviewClipPlayerWidgetState extends State<ReviewClipPlayerWidget>
                 else
                   Container(color: const Color(0xFF141418)),
 
-                // ── 2. Instagram Dark Vignette / Gradient Overlay ──
-                IgnorePointer(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black.withValues(alpha: hasActivePlayer ? 0.35 : 0.55),
-                          Colors.transparent,
-                          Colors.black.withValues(alpha: 0.75),
-                        ],
-                        stops: const [0.0, 0.4, 1.0],
-                      ),
-                    ),
-                  ),
-                ),
-
-                // ── 3. Top Badges & Full Player Action ──
-                Positioned(
-                  top: 10,
-                  left: 10,
-                  right: 10,
-                  child: Row(
-                    children: [
-                      // Badge Klip / Video Tag (Pill Style)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.65),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: Colors.white24, width: 0.6),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              widget.review.clipStart != null
-                                  ? CupertinoIcons.scissors
-                                  : CupertinoIcons.play_circle_fill,
-                              size: 11.5,
-                              color: const Color(0xFFFF2D55),
-                            ),
-                            const SizedBox(width: 5),
-                            Text(
-                              widget.review.clipTimeRangeFormatted.isNotEmpty
-                                  ? widget.review.clipTimeRangeFormatted
-                                  : (widget.review.mediaType == 'clip' ? 'Klip Anime' : 'Video'),
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.2,
-                                color: Colors.white,
-                              ),
-                            ),
-                            if (widget.review.clipDurationFormatted.isNotEmpty) ...[
-                              const SizedBox(width: 4),
-                              Text(
-                                '(${widget.review.clipDurationFormatted})',
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.white70,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-
-                      const Spacer(),
-
-                      // Tombol Tonton Full Episode / Full Player
-                      if (widget.onOpenFullPlayer != null)
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () {
-                            HapticFeedback.lightImpact();
-                            widget.onOpenFullPlayer!();
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFF2D55).withValues(alpha: 0.9),
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(color: Colors.white30, width: 0.6),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(CupertinoIcons.play_fill, size: 10, color: Colors.white),
-                                SizedBox(width: 4),
-                                Text(
-                                  'Tonton Full',
-                                  style: TextStyle(
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-
-                // ── 4. Center Action: Play / Pause Button & Instagram Pop Animations ──
+                // ── 2. Center Action: Play / Pause Button & Pop Animations ──
                 if (!hasActivePlayer && !_isInitializing)
                   Center(
                     child: Container(
-                      width: 54,
-                      height: 54,
+                      width: 50,
+                      height: 50,
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.6),
+                        color: Colors.black.withValues(alpha: 0.55),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 1.4),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 1.2),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.5),
-                            blurRadius: 18,
+                            color: Colors.black.withValues(alpha: 0.4),
+                            blurRadius: 16,
                           ),
                         ],
                       ),
                       child: const Center(
                         child: Icon(
                           CupertinoIcons.play_arrow_solid,
-                          size: 26,
+                          size: 24,
                           color: Colors.white,
                         ),
                       ),
@@ -433,7 +323,7 @@ class _ReviewClipPlayerWidgetState extends State<ReviewClipPlayerWidget>
                     child: CupertinoActivityIndicator(color: Colors.white, radius: 13),
                   ),
 
-                // Pop Feedback Icon (Play / Pause toggle ala IG)
+                // Pop Feedback Icon (Play / Pause toggle feedback)
                 if (_showFeedbackIcon && _feedbackIcon != null)
                   Center(
                     child: TweenAnimationBuilder<double>(
@@ -444,21 +334,21 @@ class _ReviewClipPlayerWidgetState extends State<ReviewClipPlayerWidget>
                         return Transform.scale(
                           scale: scale,
                           child: Container(
-                            width: 60,
-                            height: 60,
+                            width: 54,
+                            height: 54,
                             decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.65),
+                              color: Colors.black.withValues(alpha: 0.55),
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white30, width: 1),
                             ),
-                            child: Icon(_feedbackIcon, size: 28, color: Colors.white),
+                            child: Icon(_feedbackIcon, size: 26, color: Colors.white),
                           ),
                         );
                       },
                     ),
                   ),
 
-                // Double Tap Heart Animation (Instagram / Facebook like pop)
+                // Double Tap Heart Animation (Like pop)
                 if (_showHeartAnimation)
                   Center(
                     child: TweenAnimationBuilder<double>(
@@ -481,7 +371,7 @@ class _ReviewClipPlayerWidgetState extends State<ReviewClipPlayerWidget>
                     ),
                   ),
 
-                // ── 5. Error Banner ──
+                // ── 3. Error Banner ──
                 if (_hasError)
                   Center(
                     child: Container(
@@ -524,81 +414,72 @@ class _ReviewClipPlayerWidgetState extends State<ReviewClipPlayerWidget>
                     ),
                   ),
 
-                // ── 6. Bottom Controls: Mute Toggle & Title Info ──
-                Positioned(
-                  left: 12,
-                  right: 12,
-                  bottom: 12,
-                  child: Row(
-                    children: [
-                      // Judul Target & Waktu Playback
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              widget.review.subTitle != null && widget.review.subTitle!.isNotEmpty
-                                  ? '${widget.review.targetTitle} • ${widget.review.subTitle}'
-                                  : widget.review.targetTitle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                                shadows: [Shadow(color: Colors.black, blurRadius: 6)],
-                              ),
-                            ),
-                            if (hasActivePlayer) ...[
-                              const SizedBox(height: 2),
+                // ── 4. Floating Discreet Corner Controls (Tanpa Menutupi Video) ──
+                if (hasActivePlayer) ...[
+                  // Tombol Tonton Full Episode di pojok kiri bawah (jika tersedia)
+                  if (widget.onOpenFullPlayer != null)
+                    Positioned(
+                      left: 10,
+                      bottom: 10,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          widget.onOpenFullPlayer!();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.50),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.white24, width: 0.6),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(CupertinoIcons.fullscreen, size: 12, color: Colors.white),
+                              SizedBox(width: 4),
                               Text(
-                                '${UserReviewModel.formatSeconds(_currentPositionSec)} / ${UserReviewModel.formatSeconds(_endSec)}',
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white70,
-                                  shadows: [Shadow(color: Colors.black, blurRadius: 4)],
-                                ),
+                                'Full',
+                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white),
                               ),
                             ],
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-
-                      // Tombol Mute / Unmute Ala Instagram / Facebook (Pojok Kanan Bawah)
-                      if (hasActivePlayer)
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: _toggleMute,
-                          child: Container(
-                            padding: const EdgeInsets.all(7),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.65),
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white24, width: 0.8),
-                            ),
-                            child: Icon(
-                              _isMuted ? CupertinoIcons.speaker_slash_fill : CupertinoIcons.speaker_2_fill,
-                              size: 14,
-                              color: Colors.white,
-                            ),
                           ),
                         ),
-                    ],
-                  ),
-                ),
+                      ),
+                    ),
 
-                // ── 7. Instagram Video Scrubber / Progress Bar di Bagian Bawah ──
-                if (hasActivePlayer)
+                  // Tombol Mute / Unmute di pojok kanan bawah
+                  Positioned(
+                    right: 10,
+                    bottom: 10,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _toggleMute,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.50),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white24, width: 0.6),
+                        ),
+                        child: Icon(
+                          _isMuted ? CupertinoIcons.speaker_slash_fill : CupertinoIcons.speaker_2_fill,
+                          size: 13,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // ── 5. Hairline Progress Bar di Garis Bawah Layar Video ──
                   Positioned(
                     left: 0,
                     right: 0,
                     bottom: 0,
                     child: Container(
-                      height: 2.5,
-                      color: Colors.white.withValues(alpha: 0.2),
+                      height: 2.0,
+                      color: Colors.white.withValues(alpha: 0.15),
                       child: FractionallySizedBox(
                         alignment: Alignment.centerLeft,
                         widthFactor: _progressFraction.clamp(0.0, 1.0),
@@ -612,6 +493,7 @@ class _ReviewClipPlayerWidgetState extends State<ReviewClipPlayerWidget>
                       ),
                     ),
                   ),
+                ],
               ],
             ),
           ),

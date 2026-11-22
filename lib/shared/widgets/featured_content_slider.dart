@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../core/constants/app_colors.dart';
 import 'app_network_image.dart';
+import 'bouncy_tap.dart';
+import 'glass_container.dart';
 
 /// Data model for an item displayed in the Apple/Netflix-styled FeaturedContentSlider.
 class FeaturedContentItem {
@@ -163,9 +165,9 @@ class _FeaturedCard extends StatelessWidget {
                 borderRadius: 0,
                 fit: BoxFit.cover,
                 alignment: Alignment.topCenter,
-                filterQuality: FilterQuality.medium,
-                memCacheWidth: 800,
-                memCacheHeight: 900,
+                filterQuality: FilterQuality.high,
+                memCacheWidth: 1200,
+                memCacheHeight: 1400,
               ),
 
               // ── 2. Cinematic Ambient Multi-stop Gradient Overlays ──
@@ -243,26 +245,23 @@ class _FeaturedCard extends StatelessWidget {
                     // Action Buttons Row: [ ▶ Watch ]   [ ⌄ More ]   ...   [ • • ━ ]
                     Row(
                       children: [
-                        // Watch Button (solid white pill)
-                        GestureDetector(
+                        // Watch Button (frosted white glass pill)
+                        BouncyTap(
+                          scaleDown: 0.94,
                           onTap: () {
                             HapticFeedback.lightImpact();
                             item.onTap();
                           },
-                          child: Container(
+                          child: GlassContainer(
                             height: 38,
                             padding: const EdgeInsets.symmetric(horizontal: 18),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.white.withValues(alpha: 0.25),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
+                            borderRadius: BorderRadius.circular(20),
+                            color: Colors.white.withValues(alpha: 0.92),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.80),
+                              width: 0.8,
                             ),
+                            blur: 10,
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -287,8 +286,9 @@ class _FeaturedCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 10),
 
-                        // More Button (dark glass pill)
-                        GestureDetector(
+                        // More Button (dark frosted glass pill)
+                        BouncyTap(
+                          scaleDown: 0.94,
                           onTap: () {
                             HapticFeedback.lightImpact();
                             if (item.onSecondaryTap != null) {
@@ -297,17 +297,16 @@ class _FeaturedCard extends StatelessWidget {
                               item.onTap();
                             }
                           },
-                          child: Container(
+                          child: GlassContainer(
                             height: 38,
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.16),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.28),
-                                width: 0.8,
-                              ),
+                            borderRadius: BorderRadius.circular(20),
+                            color: Colors.black.withValues(alpha: 0.45),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.28),
+                              width: 0.8,
                             ),
+                            blur: 10,
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [

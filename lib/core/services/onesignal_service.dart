@@ -9,6 +9,7 @@ import '../network/api_client.dart';
 import '../../../features/anime/presentation/anime_detail_screen.dart';
 import '../../../features/comic/presentation/comic_detail_screen.dart';
 import '../../../features/notifications/presentation/universal_notification_modal.dart';
+import '../../../features/notifications/services/universal_notification_service.dart';
 import '../../../features/auth/data/models/user_model.dart';
 import 'package:moko/features/announcement/data/models/announcement_model.dart';
 import 'package:moko/features/announcement/data/announcement_repository.dart';
@@ -22,8 +23,10 @@ class OneSignalService {
   static final OneSignalService instance = OneSignalService._();
 
   /// OneSignal App ID
-  static const String defaultAppId = "49b24944-db96-43b7-bfb6-da98bf1c6dcd";
+  static const String defaultAppId = "b49b4d30-839c-4e75-87d6-9ddea38667da";
   static const String _kCustomAppIdKey = "onesignal_app_id_custom";
+  String _activeAppId = defaultAppId;
+  String get activeAppId => _activeAppId;
 
   /// Global NavigatorKey untuk navigasi langsung ke detail anime
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -69,8 +72,43 @@ class OneSignalService {
     return 'Anime: $a • Komik: $c • Ultah: $b';
   }
 
+  /// OneSignal Subscription ID (Player ID pengganti di SDK v5)
+  String? get subscriptionId {
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) return null;
+    return OneSignal.User.pushSubscription.id;
+  }
+
+  /// OneSignal Push Token (FCM Token)
+  String? get pushToken {
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) return null;
+    return OneSignal.User.pushSubscription.token;
+  }
+
+  /// Status apakah perangkat terdaftar/berlangganan ke OneSignal
+  bool get isSubscribed {
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) return false;
+    return OneSignal.User.pushSubscription.optedIn ?? false;
+  }
+
+  /// Status izin notifikasi sistem push
+  bool get hasNotificationPermission {
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) return true;
+    return OneSignal.Notifications.permission;
+  }
+
+  /// Meminta izin notifikasi secara eksplisit ke pengguna
+  Future<bool> promptNotificationPermission() async {
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) return true;
+    try {
+      final res = await OneSignal.Notifications.requestPermission(true);
+      return res;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Cek apakah suatu series_key / anime_id ada di daftar bookmark
-  Future<bool> _isAnimeBookmarked(String animeKey) async {
+  Future<bool> isAnimeBookmarked(String animeKey) async {
     if (animeKey.isEmpty) return false;
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -87,7 +125,7 @@ class OneSignalService {
   }
 
   /// Cek apakah suatu comic slug ada di daftar bookmark
-  Future<bool> _isComicBookmarked(String comicSlug) async {
+  Future<bool> isComicBookmarked(String comicSlug) async {
     if (comicSlug.isEmpty) return false;
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -174,6 +212,7 @@ class OneSignalService {
       } else {
         await addTag('notif_preference', 'all');
       }
+      _syncWithBackend();
     } catch (e) {
       debugPrint('[OneSignal] syncFromServer error: $e');
     }
@@ -211,6 +250,7 @@ class OneSignalService {
         } else {
           effectiveMode = 'all';
         }
+        final subId = subscriptionId;
         final res = await ApiClient.instance.post(
           ApiEndpoints.userNotificationPreference,
           data: {
@@ -218,9 +258,13 @@ class OneSignalService {
             'anime_notif_mode': _animeNotifMode,
             'comic_notif_mode': _comicNotifMode,
             'birthday_notif_enabled': _birthdayNotifEnabled,
+            if (subId != null && subId.isNotEmpty) 'onesignal_id': subId,
+            if (subId != null && subId.isNotEmpty) 'player_id': subId,
+            if (subId != null && subId.isNotEmpty) 'subscription_id': subId,
+            'onesignal_app_id': _activeAppId,
           },
         );
-        debugPrint('[OneSignal] Synced preference to backend: ${res.statusCode} (mode: $effectiveMode)');
+        debugPrint('[OneSignal] Synced preference to backend: ${res.statusCode} (mode: $effectiveMode, subId: $subId)');
       }
     } catch (e) {
       debugPrint('[OneSignal] Error syncing preference with backend: $e');
@@ -639,7 +683,12 @@ class OneSignalService {
 
     try {
       final prefs = await SharedPreferences.getInstance();
+      final storedCustom = prefs.getString(_kCustomAppIdKey);
+      if (storedCustom != null && storedCustom != defaultAppId) {
+        await prefs.remove(_kCustomAppIdKey);
+      }
       final appId = customAppId ?? prefs.getString(_kCustomAppIdKey) ?? defaultAppId;
+      _activeAppId = appId;
 
       if (appId.isEmpty) {
         debugPrint('[OneSignal] Warning: App ID belum dikonfigurasi.');
@@ -654,23 +703,26 @@ class OneSignalService {
       _comicNotifMode = prefs.getString(kComicNotifModeKey) ?? _notifMode;
       _birthdayNotifEnabled = prefs.getBool(kBirthdayNotifEnabledKey) ?? true;
 
-      // 1. Set log level minimal
-      OneSignal.Debug.setLogLevel(OSLogLevel.none);
+      // 1. Set log level debug agar terlihat jelas proses registrasi di logcat
+      OneSignal.Debug.setLogLevel(OSLogLevel.debug);
 
       // 2. Inisialisasi SDK OneSignal
+      debugPrint('[OneSignal] Initializing SDK with App ID: $appId');
       OneSignal.initialize(appId);
 
-      // 3. Langsung minta izin notifikasi ke user (Muncul dialog resmi "Izinkan notifikasi?" Android 13+ & iOS)
-      await OneSignal.Notifications.requestPermission(true);
-
-      // 4. Pastikan notifikasi TAMPIL di layar sesuai preferensi user
-      OneSignal.Notifications.addForegroundWillDisplayListener((event) async {
+      // 3. Listener saat notifikasi tiba di foreground (Pastikan tampil di layar)
+      OneSignal.Notifications.addForegroundWillDisplayListener((event) {
         debugPrint('[OneSignal] Notification received in foreground: ${event.notification.title}');
+        UniversalNotificationService.instance.refreshUnreadCounts();
         final data = event.notification.additionalData;
         final type = data?['type']?.toString().toLowerCase() ?? '';
         final category = data?['category']?.toString().toLowerCase() ?? '';
         final title = (event.notification.title ?? '').toLowerCase();
         final body = (event.notification.body ?? '').toLowerCase();
+
+        if (type == 'announcement') {
+          AnnouncementRepository.instance.fetchActiveAnnouncements(forceRefresh: true);
+        }
 
         final isBirthdayNotif = type == 'user_birthday' ||
             type == 'birthday' ||
@@ -701,16 +753,6 @@ class OneSignalService {
             event.preventDefault();
             return;
           }
-          if (_animeNotifMode == 'bookmarked') {
-            final seriesKey = data?['series_key']?.toString() ?? '';
-            final url = data?['url']?.toString() ?? '';
-            final isSaved = await _isAnimeBookmarked(seriesKey) || await _isAnimeBookmarked(url);
-            if (!isSaved) {
-              debugPrint('[OneSignal] Notifikasi diabaikan karena anime bukan bookmark: $seriesKey');
-              event.preventDefault();
-              return;
-            }
-          }
         }
 
         // Filter notifikasi Komik
@@ -720,29 +762,37 @@ class OneSignalService {
             event.preventDefault();
             return;
           }
-          if (_comicNotifMode == 'bookmarked') {
-            final slug = data?['slug']?.toString() ?? '';
-            final isSaved = await _isComicBookmarked(slug);
-            if (!isSaved) {
-              debugPrint('[OneSignal] Notifikasi diabaikan karena komik bukan bookmark: $slug');
-              event.preventDefault();
-              return;
-            }
-          }
         }
 
         // Tampilkan banner notifikasi di status bar / heads-up
         event.notification.display();
       });
 
-      // 5. Listener saat notifikasi DIKETUK/DIKLIK oleh pengguna (Langsung buka anime)
+      // 4. Listener saat notifikasi DIKETUK/DIKLIK oleh pengguna (Langsung buka anime)
       OneSignal.Notifications.addClickListener(_handleNotificationClicked);
 
+      // 5. Observer perubahan status push subscription (Player ID v5)
+      OneSignal.User.pushSubscription.addObserver((state) {
+        debugPrint('[OneSignal] Subscription state changed: id=${state.current.id}, token=${state.current.token}, optedIn=${state.current.optedIn}');
+        _syncWithBackend();
+      });
+
+      // 6. Tandai inisialisasi berhasil SEGERA (agar tidak memblokir login atau tag)
       _isInitialized = true;
       if (!_initCompleter.isCompleted) {
         _initCompleter.complete();
       }
 
+      // 7. Request izin notifikasi di background (non-blocking agar tidak menggantung UI startup)
+      unawaited(
+        OneSignal.Notifications.requestPermission(true).then((granted) {
+          debugPrint('[OneSignal] Notification permission granted: $granted');
+        }).catchError((e) {
+          debugPrint('[OneSignal] Notification permission request error: $e');
+        }),
+      );
+
+      // 8. Sinkronkan preferensi tag awal
       if (_notifMode == 'bookmarked' || _animeNotifMode == 'bookmarked' || _comicNotifMode == 'bookmarked') {
         addTag('notif_preference', 'bookmarked_only');
       } else {
@@ -774,7 +824,9 @@ class OneSignalService {
         }
       }
 
-      debugPrint('[OneSignal] Initialized & permission requested for App ID: ${appId.substring(0, 8)}...');
+      final currentSubId = OneSignal.User.pushSubscription.id;
+      debugPrint('[OneSignal] Initialized successfully for App ID: $appId (SubId: $currentSubId)');
+      _syncWithBackend();
     } catch (e) {
       debugPrint('[OneSignal] Initialization error: $e');
       if (!_initCompleter.isCompleted) {
@@ -896,6 +948,7 @@ class OneSignalService {
     try {
       await OneSignal.login(externalId);
       debugPrint('[OneSignal] login success: externalId $externalId');
+      _syncWithBackend();
     } catch (e) {
       debugPrint('[OneSignal] login error: $e');
     }

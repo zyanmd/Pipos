@@ -76,26 +76,34 @@ class AppTheme {
         unselectedLabelStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
       ),
       cardTheme: CardThemeData(
-        color: AppColors.lightCard,
+        color: AppColors.glassLight,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(22),
-          side: const BorderSide(color: AppColors.lightBorder, width: 0.5),
+          side: const BorderSide(color: AppColors.glassLightBorder, width: 0.5),
         ),
       ),
       chipTheme: ChipThemeData(
         shape: const StadiumBorder(),
-        side: const BorderSide(color: AppColors.lightBorder, width: 0.5),
+        backgroundColor: AppColors.glassLight,
+        side: const BorderSide(color: AppColors.glassLightBorder, width: 0.5),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         labelStyle: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600),
       ),
       dialogTheme: DialogThemeData(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: AppColors.glassLightStrong,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: AppColors.glassLightBorder, width: 0.5),
+        ),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.glassLightStrong,
+        modalBackgroundColor: AppColors.glassLightStrong,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+          side: BorderSide(color: AppColors.glassLightBorder, width: 0.5),
         ),
       ),
       inputDecorationTheme: _inputDecoration(true),
@@ -230,26 +238,34 @@ class AppTheme {
         unselectedLabelStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w500),
       ),
       cardTheme: CardThemeData(
-        color: AppColors.darkCard,
+        color: AppColors.glassDark,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(22),
-          side: const BorderSide(color: AppColors.darkBorder, width: 0.5),
+          side: const BorderSide(color: AppColors.glassDarkBorder, width: 0.5),
         ),
       ),
       chipTheme: ChipThemeData(
         shape: const StadiumBorder(),
-        side: const BorderSide(color: AppColors.darkBorder, width: 0.5),
+        backgroundColor: AppColors.glassDark,
+        side: const BorderSide(color: AppColors.glassDarkBorder, width: 0.5),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         labelStyle: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600),
       ),
       dialogTheme: DialogThemeData(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        backgroundColor: AppColors.glassDarkStrong,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: const BorderSide(color: AppColors.glassDarkBorder, width: 0.5),
+        ),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.glassDarkStrong,
+        modalBackgroundColor: AppColors.glassDarkStrong,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+          side: BorderSide(color: AppColors.glassDarkBorder, width: 0.5),
         ),
       ),
       inputDecorationTheme: _inputDecoration(false),

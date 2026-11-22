@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../shared/providers/auth_provider.dart';
+import '../../../../shared/widgets/glass_container.dart';
 import '../../../auth/data/models/user_model.dart';
 import '../../data/gamification_repository.dart';
 import '../leaderboard_screen.dart';
@@ -182,27 +183,17 @@ class _LevelXpCardState extends State<LevelXpCard> {
       );
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF18181C) : Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06),
-          width: 0.8,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
+    return GlassContainer(
+      borderRadius: BorderRadius.circular(20),
+      padding: const EdgeInsets.all(16),
+      blur: 10,
+      border: Border.all(
+        color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06),
+        width: 0.6,
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
             // ── TOP ROW: LEVEL BADGE, RANK, & STREAK ──
             Row(
               children: [
@@ -463,7 +454,6 @@ class _LevelXpCardState extends State<LevelXpCard> {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 }

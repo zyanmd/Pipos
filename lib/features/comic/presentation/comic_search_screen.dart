@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../shared/widgets/common_widgets.dart';
+import '../../../shared/widgets/ios_capsule_search_bar.dart';
 import '../../../shared/widgets/poster_card.dart';
 import '../../../shared/widgets/shimmer_placeholder.dart';
 import '../../comic/data/comic_repository.dart';
@@ -29,17 +30,17 @@ class _ComicSearchScreenState extends State<ComicSearchScreen> {
   List<String> _history = [];
 
   static const String _historyKey = 'recent_comic_searches';
-  static const List<String> _popularTags = [
-    'Manhwa',
-    'Manga',
-    'Manhua',
-    'Action',
-    'Romance',
-    'Fantasy',
-    'Isekai',
-    'Comedy',
-    'Martial Arts',
-    'Horor',
+  static const List<Map<String, dynamic>> _popularGenres = [
+    {'name': 'Manhwa', 'icon': '🇰🇷', 'color': Color(0xFF0EA5E9)},
+    {'name': 'Manga', 'icon': '🇯🇵', 'color': Color(0xFFEF4444)},
+    {'name': 'Manhua', 'icon': '🇨🇳', 'color': Color(0xFFF59E0B)},
+    {'name': 'Action', 'icon': '🔥', 'color': Color(0xFFDC2626)},
+    {'name': 'Romance', 'icon': '🌸', 'color': Color(0xFFEC4899)},
+    {'name': 'Fantasy', 'icon': '🔮', 'color': Color(0xFF8B5CF6)},
+    {'name': 'Isekai', 'icon': '🌀', 'color': Color(0xFF06B6D4)},
+    {'name': 'Comedy', 'icon': '🎭', 'color': Color(0xFF10B981)},
+    {'name': 'Martial Arts', 'icon': '🥋', 'color': Color(0xFFD97706)},
+    {'name': 'Horor', 'icon': '👻', 'color': Color(0xFF6366F1)},
   ];
 
   @override
@@ -141,170 +142,23 @@ class _ComicSearchScreenState extends State<ComicSearchScreen> {
             ),
             child: Column(
           children: [
-            // Apple Header & Spotlight Search Box
+            // Modern Capsule Search Bar Header
             Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkBackground : Colors.white,
-                border: Border(
-                  bottom: BorderSide(
-                    color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                    width: 0.5,
-                  ),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () => Navigator.maybePop(context),
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: isDark ? AppColors.darkCard : const Color(0xFFE5E5EA),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isDark ? AppColors.darkBorder : Colors.transparent,
-                              width: 0.5,
-                            ),
-                          ),
-                          child: Icon(
-                            CupertinoIcons.chevron_back,
-                            size: 18,
-                            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Text(
-                          'Cari Komik',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.4,
-                            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                          ),
-                        ),
-                      ),
-                      if (_hasSearched) ...[
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            _controller.clear();
-                            setState(() {
-                              _results.clear();
-                              _hasSearched = false;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF0A84FF).withValues(alpha: isDark ? 0.18 : 0.10),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Text(
-                              'Reset',
-                              style: TextStyle(
-                                color: Color(0xFF0A84FF),
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Apple Spotlight Search Bar
-                  Container(
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.darkCard : const Color(0xFFE5E5EA),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: isDark ? AppColors.darkBorder : Colors.transparent,
-                        width: 0.5,
-                      ),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
-                      children: [
-                        Icon(
-                          CupertinoIcons.search,
-                          size: 18,
-                          color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: _controller,
-                            onSubmitted: (val) => _search(),
-                            textInputAction: TextInputAction.search,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: 'Cari manga, manhwa, manhua, genre...',
-                              hintStyle: TextStyle(
-                                fontSize: 14,
-                                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                              ),
-                              border: InputBorder.none,
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                            onChanged: (_) => setState(() {}),
-                          ),
-                        ),
-                        if (_controller.text.isNotEmpty)
-                          GestureDetector(
-                            onTap: () {
-                              _controller.clear();
-                              setState(() {});
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(4),
-                              child: Icon(
-                                CupertinoIcons.clear_thick_circled,
-                                size: 17,
-                                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                              ),
-                            ),
-                          ),
-                        const SizedBox(width: 6),
-                        GestureDetector(
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            _search();
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF0A84FF),
-                              borderRadius: BorderRadius.circular(9),
-                            ),
-                            child: const Text(
-                              'Cari',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+              color: isDark ? AppColors.darkBackground : AppColors.lightBackground,
+              child: IosCapsuleSearchBar(
+                controller: _controller,
+                hintText: 'Cari manga, manhwa, manhua...',
+                autoFocus: true,
+                onSubmitted: (val) => _search(),
+                onChanged: (_) => setState(() {}),
+                onClear: () {
+                  _controller.clear();
+                  setState(() {
+                    _results.clear();
+                    _hasSearched = false;
+                  });
+                },
               ),
             ),
 
@@ -348,7 +202,7 @@ class _ComicSearchScreenState extends State<ComicSearchScreen> {
   Widget _buildSearchSuggestions(bool isDark) {
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       children: [
         // Recent Searches Section
         if (_history.isNotEmpty) ...[
@@ -357,7 +211,19 @@ class _ComicSearchScreenState extends State<ComicSearchScreen> {
             children: [
               Row(
                 children: [
-                  const Icon(CupertinoIcons.clock_fill, size: 16, color: Color(0xFF0A84FF)),
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0EA5E9).withValues(alpha: 0.14),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      CupertinoIcons.clock_fill,
+                      size: 13,
+                      color: Color(0xFF0EA5E9),
+                    ),
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     'Riwayat Pencarian',
@@ -365,25 +231,28 @@ class _ComicSearchScreenState extends State<ComicSearchScreen> {
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.2,
-                      color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                      color: isDark ? Colors.white : Colors.black87,
                     ),
                   ),
                 ],
               ),
               GestureDetector(
                 onTap: _clearHistory,
-                child: Text(
-                  'Hapus Semua',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  child: Text(
+                    'Hapus Semua',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white38 : Colors.black45,
+                    ),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -397,32 +266,42 @@ class _ComicSearchScreenState extends State<ComicSearchScreen> {
                   },
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
-                    padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
+                    padding: const EdgeInsets.fromLTRB(12, 7, 8, 7),
                     decoration: BoxDecoration(
-                      color: isDark ? AppColors.darkCard : AppColors.lightCard,
+                      color: isDark ? const Color(0xFF161622) : const Color(0xFFF2F2F7),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                        width: 0.5,
+                        color: isDark ? Colors.white.withValues(alpha: 0.07) : Colors.black.withValues(alpha: 0.05),
+                        width: 1,
                       ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        Icon(
+                          CupertinoIcons.search,
+                          size: 12,
+                          color: isDark ? Colors.white38 : Colors.black38,
+                        ),
+                        const SizedBox(width: 6),
                         Text(
                           item,
                           style: TextStyle(
                             fontSize: 13,
-                            color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                            fontWeight: FontWeight.w500,
+                            color: isDark ? Colors.white : Colors.black87,
                           ),
                         ),
                         const SizedBox(width: 6),
                         GestureDetector(
                           onTap: () => _removeFromHistory(item),
-                          child: Icon(
-                            CupertinoIcons.clear_circled_solid,
-                            size: 15,
-                            color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                          child: Padding(
+                            padding: const EdgeInsets.all(2),
+                            child: Icon(
+                              CupertinoIcons.xmark,
+                              size: 12,
+                              color: isDark ? Colors.white38 : Colors.black38,
+                            ),
                           ),
                         ),
                       ],
@@ -435,10 +314,22 @@ class _ComicSearchScreenState extends State<ComicSearchScreen> {
           const SizedBox(height: 24),
         ],
 
-        // Popular Comic Tags & Categories
+        // Popular Comic Genres
         Row(
           children: [
-            const Icon(CupertinoIcons.flame_fill, size: 16, color: Color(0xFF0A84FF)),
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: const Color(0xFF0EA5E9).withValues(alpha: 0.14),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                CupertinoIcons.flame_fill,
+                size: 13,
+                color: Color(0xFF0EA5E9),
+              ),
+            ),
             const SizedBox(width: 8),
             Text(
               'Kategori & Genre Populer',
@@ -446,7 +337,7 @@ class _ComicSearchScreenState extends State<ComicSearchScreen> {
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.2,
-                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                color: isDark ? Colors.white : Colors.black87,
               ),
             ),
           ],
@@ -454,33 +345,44 @@ class _ComicSearchScreenState extends State<ComicSearchScreen> {
         const SizedBox(height: 12),
         Wrap(
           spacing: 8,
-          runSpacing: 10,
-          children: _popularTags.map((tag) {
+          runSpacing: 9,
+          children: _popularGenres.map((genre) {
+            final name = genre['name'] as String;
+            final icon = genre['icon'] as String;
+            final color = genre['color'] as Color;
+
             return Material(
               color: Colors.transparent,
               child: InkWell(
                 onTap: () {
                   HapticFeedback.selectionClick();
-                  _search(tag);
+                  _search(name);
                 },
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(16),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0A84FF).withValues(alpha: isDark ? 0.14 : 0.08),
-                    borderRadius: BorderRadius.circular(14),
+                    color: color.withValues(alpha: isDark ? 0.12 : 0.08),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: const Color(0xFF0A84FF).withValues(alpha: isDark ? 0.30 : 0.20),
-                      width: 0.5,
+                      color: color.withValues(alpha: isDark ? 0.28 : 0.20),
+                      width: 1,
                     ),
                   ),
-                  child: Text(
-                    tag,
-                    style: const TextStyle(
-                      color: Color(0xFF0A84FF),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(icon, style: const TextStyle(fontSize: 13)),
+                      const SizedBox(width: 6),
+                      Text(
+                        name,
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black87,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -488,30 +390,50 @@ class _ComicSearchScreenState extends State<ComicSearchScreen> {
           }).toList(),
         ),
 
-        const SizedBox(height: 28),
-        // Apple Comic Info Callout Box
+        const SizedBox(height: 26),
+        // Modern Spotlight Discovery Card
         Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isDark ? AppColors.darkCard : AppColors.lightCard,
-            borderRadius: BorderRadius.circular(14),
+            color: isDark ? const Color(0xFF14141E) : Colors.white,
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-              width: 0.5,
+              color: isDark ? const Color(0xFF0EA5E9).withValues(alpha: 0.18) : Colors.black.withValues(alpha: 0.08),
+              width: 1,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
           child: Row(
             children: [
               Container(
-                width: 36,
-                height: 36,
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF0A84FF).withValues(alpha: isDark ? 0.16 : 0.10),
-                  borderRadius: BorderRadius.circular(10),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0EA5E9), Color(0xFF0284C7)],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0EA5E9).withValues(alpha: 0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-                child: const Icon(CupertinoIcons.book_fill, color: Color(0xFF0A84FF), size: 18),
+                child: const Icon(
+                  CupertinoIcons.book_fill,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -520,16 +442,17 @@ class _ComicSearchScreenState extends State<ComicSearchScreen> {
                       'Koleksi Komik Lengkap',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                        fontSize: 13.5,
+                        color: isDark ? Colors.white : Colors.black87,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     Text(
                       'Temukan ribuan chapter manga hitam-putih, manhwa berwarna, dan manhua terupdate setiap hari.',
                       style: TextStyle(
                         fontSize: 12,
-                        color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                        height: 1.35,
+                        color: isDark ? Colors.white54 : Colors.black54,
                       ),
                     ),
                   ],
@@ -546,52 +469,148 @@ class _ComicSearchScreenState extends State<ComicSearchScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Result summary pill
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
-          child: Text(
-            'Ditemukan ${_results.length} komik untuk "${_controller.text}"',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-            ),
-          ),
-        ),
-        Expanded(
-          child: GridView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 6, 16, 32),
-            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: Responsive.gridColumns(context),
-              mainAxisSpacing: 14,
-              crossAxisSpacing: 12,
-              childAspectRatio: 0.60,
-            ),
-            itemCount: _results.length,
-            itemBuilder: (ctx, i) {
-              final c = _results[i];
-              return PosterCard(
-                title: c.title,
-                imageUrl: c.thumb,
-                subtitle: c.type ?? c.latestChapter,
-                badge: c.rating != null ? '★ ${c.rating}' : null,
-                width: double.infinity,
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  Navigator.push(
-                    context,
-                    CupertinoPageRoute(
-                      builder: (_) => ComicDetailScreen(
-                        slug: c.slug,
-                        comic: c,
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0EA5E9).withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: const Color(0xFF0EA5E9).withValues(alpha: 0.28),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      CupertinoIcons.sparkles,
+                      size: 13,
+                      color: Color(0xFF0EA5E9),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      '${_results.length} Komik Ditemukan',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0EA5E9),
                       ),
                     ),
-                  );
-                },
-              );
-            },
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'untuk "${_controller.text}"',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? Colors.white54 : Colors.black54,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
+        if (_results.isEmpty)
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(22),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF14141E) : Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 54,
+                        height: 54,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0EA5E9).withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          CupertinoIcons.search,
+                          size: 26,
+                          color: Color(0xFF0EA5E9),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Tidak Ada Komik Ditemukan',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Coba periksa ejaan judul atau pilih salah satu kategori populer di atas.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          height: 1.4,
+                          color: isDark ? Colors.white54 : Colors.black54,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          Expanded(
+            child: GridView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: Responsive.gridColumns(context),
+                mainAxisSpacing: 14,
+                crossAxisSpacing: 12,
+                childAspectRatio: 0.60,
+              ),
+              itemCount: _results.length,
+              itemBuilder: (ctx, i) {
+                final c = _results[i];
+                return PosterCard(
+                  title: c.title,
+                  imageUrl: c.thumb,
+                  subtitle: c.type ?? c.latestChapter,
+                  badge: c.rating != null ? '★ ${c.rating}' : null,
+                  width: double.infinity,
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    Navigator.push(
+                      context,
+                      CupertinoPageRoute(
+                        builder: (_) => ComicDetailScreen(
+                          slug: c.slug,
+                          comic: c,
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
       ],
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../shared/widgets/glass_container.dart';
 import '../../data/chat_repository.dart';
 import '../../data/models/chat_model.dart';
 import '../chat_screen.dart';
@@ -156,28 +157,17 @@ class _ChatMarqueeBannerState extends State<ChatMarqueeBanner> {
         color: Colors.transparent,
         child: InkWell(
           onTap: _openChat,
-          borderRadius: BorderRadius.circular(13),
-          child: Container(
+          borderRadius: BorderRadius.circular(14),
+          child: GlassContainer(
             height: 38,
             padding: const EdgeInsets.symmetric(horizontal: 10),
-            decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            blur: 10,
+            border: Border.all(
               color: isDark
-                  ? const Color(0xFF1C1C1E).withValues(alpha: 0.85)
-                  : const Color(0xFFF2F2F7).withValues(alpha: 0.95),
-              borderRadius: BorderRadius.circular(13),
-              border: Border.all(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.15)
-                    : Colors.black.withValues(alpha: 0.08),
-                width: 0.8,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+                  ? Colors.white.withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: 0.08),
+              width: 0.8,
             ),
             child: Row(
               children: [

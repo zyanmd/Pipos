@@ -95,7 +95,7 @@ class _ChatBackgroundScreenState extends State<ChatBackgroundScreen> {
           SnackBar(
             backgroundColor: AppColors.iosGreen,
             behavior: SnackBarBehavior.floating,
-            content: const Text('Background chat berhasil diunggah dan disimpan ke server!'),
+            content: const Text('Background forum berhasil diunggah dan disimpan ke server!'),
           ),
         );
       } else {
@@ -145,7 +145,7 @@ class _ChatBackgroundScreenState extends State<ChatBackgroundScreen> {
           backgroundColor: AppColors.iosGreen,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          content: const Text('Background chat berhasil disimpan ke database server!'),
+          content: const Text('Background forum berhasil disimpan ke database server!'),
         ),
       );
     } else {
@@ -199,7 +199,7 @@ class _ChatBackgroundScreenState extends State<ChatBackgroundScreen> {
               onPressed: () => Navigator.pop(context),
             ),
             title: Text(
-              'Background Chat Khusus',
+              'Background Forum Khusus',
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w600,
@@ -233,9 +233,9 @@ class _ChatBackgroundScreenState extends State<ChatBackgroundScreen> {
           body: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             children: [
-              // 1. Live Preview Bubble
+              // 1. Live Preview Forum Card
               Text(
-                'PRATINJAU GELEMBUNG CHAT',
+                'PRATINJAU KARTU FORUM & KOMENTAR',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -324,7 +324,7 @@ class _ChatBackgroundScreenState extends State<ChatBackgroundScreen> {
                                         ),
                                         const SizedBox(height: 3),
                                         Text(
-                                          'Halo semuanya! Ini tampilan bubble chat khusus dengan background pilihan saya ✨',
+                                          'Halo semuanya! Ini pratinjau thread dan komentar forum dengan latar belakang pilihan saya.',
                                           style: TextStyle(
                                             fontSize: 13,
                                             height: 1.35,
@@ -577,7 +577,7 @@ class _ChatBackgroundScreenState extends State<ChatBackgroundScreen> {
 
               // 4. Custom Text Color
               Text(
-                'WARNA TEKS CHAT',
+                'WARNA TEKS FORUM',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,

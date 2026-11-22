@@ -11,6 +11,7 @@ class AnnouncementRepository {
 
   static const String _kDismissedIdsKey = 'dismissed_announcement_ids';
   static const String _kSeenPopupIdsKey = 'seen_announcement_popup_ids';
+  static const String _kReadAnnouncementIdsKey = 'read_announcement_ids';
 
   final ValueNotifier<List<AnnouncementModel>> announcements = ValueNotifier<List<AnnouncementModel>>([]);
   final ValueNotifier<bool> isLoading = ValueNotifier<bool>(false);
@@ -19,6 +20,8 @@ class AnnouncementRepository {
   bool _dismissedLoaded = false;
   Set<int> _seenPopupIds = {};
   bool _seenPopupLoaded = false;
+  Set<int> _readIds = {};
+  bool _readLoaded = false;
   DateTime? _lastFetch;
 
   Future<void> _loadDismissedIds() async {
@@ -44,6 +47,59 @@ class AnnouncementRepository {
       _seenPopupLoaded = true;
     }
   }
+
+  Future<void> _loadReadIds() async {
+    if (_readLoaded) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_kReadAnnouncementIdsKey) ?? [];
+      _readIds = list.map((e) => int.tryParse(e) ?? 0).where((id) => id > 0).toSet();
+      _readLoaded = true;
+    } catch (_) {
+      _readLoaded = true;
+    }
+  }
+
+  /// Cek apakah pengumuman sudah dibaca oleh user
+  bool isRead(int id) {
+    return _readIds.contains(id);
+  }
+
+  /// Menandai satu pengumuman sebagai sudah dibaca
+  Future<void> markAsRead(int id) async {
+    await _loadReadIds();
+    _readIds.add(id);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(
+        _kReadAnnouncementIdsKey,
+        _readIds.map((e) => e.toString()).toList(),
+      );
+    } catch (_) {}
+  }
+
+  /// Menandai semua pengumuman aktif sebagai sudah dibaca
+  Future<void> markAllAnnouncementsAsRead() async {
+    await _loadReadIds();
+    for (final item in announcements.value) {
+      _readIds.add(item.id);
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(
+        _kReadAnnouncementIdsKey,
+        _readIds.map((e) => e.toString()).toList(),
+      );
+    } catch (_) {}
+  }
+
+  /// Jumlah pengumuman aktif yang belum dibaca
+  int get unreadCount {
+    return announcements.value.where((item) => !_readIds.contains(item.id)).length;
+  }
+
+  /// Daftar semua pengumuman aktif (termasuk yang di-dismiss dari home banner)
+  List<AnnouncementModel> get allAnnouncements => announcements.value;
 
   /// Menandai satu pengumuman sebagai sudah pernah muncul di popup
   Future<void> markPopupAsSeen(int id) async {
@@ -73,6 +129,7 @@ class AnnouncementRepository {
   /// Memuat pengumuman aktif dari backend `/api/announcements`.
   Future<List<AnnouncementModel>> fetchActiveAnnouncements({bool forceRefresh = false}) async {
     await _loadDismissedIds();
+    await _loadReadIds();
 
     if (!forceRefresh &&
         announcements.value.isNotEmpty &&

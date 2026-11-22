@@ -14,11 +14,13 @@ import '../../../shared/widgets/poster_card.dart';
 import '../data/anime_repository.dart';
 import '../data/models/anime_model.dart';
 import '../../genre/presentation/genre_detail_screen.dart';
-import 'anime_episode_player.dart';
 import '../../../shared/widgets/ad_banner_widget.dart';
 import '../../../core/services/onesignal_service.dart';
 import '../../profile/data/profile_repository.dart';
 import '../../review/presentation/widgets/review_input_dialog.dart';
+import '../../mal/presentation/widgets/mal_detail_card.dart';
+import '../../../shared/widgets/count_up_text.dart';
+import '../../nobar/presentation/widgets/watch_mode_sheet.dart';
 
 /// Pure Apple iOS HIG Styled Anime Detail Screen.
 /// Features:
@@ -533,20 +535,17 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
     Duration? startAt,
   }) async {
     HapticFeedback.selectionClick();
-    await Navigator.of(context, rootNavigator: true).push(
-      CupertinoPageRoute(
-        builder: (_) => AnimeEpisodePlayerScreen(
-          episodeId: episode.id,
-          episodeLabel: episode.label,
-          episodeUrl: episode.url,
-          animeId: widget.animeId,
-          animeTitle: detail.title,
-          animeThumb: detail.thumb,
-          episodes: episodes,
-          currentEpisodeIndex: index,
-          startAt: startAt,
-        ),
-      ),
+    await showWatchModeSheet(
+      context: context,
+      animeId: widget.animeId,
+      animeTitle: detail.title,
+      animeThumb: detail.thumb ?? '',
+      episodeId: episode.id,
+      episodeLabel: episode.label,
+      episodeUrl: episode.url,
+      startAt: startAt,
+      episodes: episodes,
+      currentEpisodeIndex: index,
     );
     _loadWatchedEpisodes();
   }
@@ -742,7 +741,7 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
                     targetTitle: d.title,
                     targetCover: d.thumb,
                   );
-                  if (res != null && context.mounted) {
+                  if (res != null && mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Ulasan berhasil disimpan!'),
@@ -1092,7 +1091,7 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
 
                   const SizedBox(height: 12),
 
-                  // Secondary Quick Action Pills Row
+                  // Secondary Quick Action Pills Row (Icon-only clean Apple style)
                   Row(
                     children: [
                       // Profile Liked Action Pill
@@ -1101,7 +1100,6 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
                           icon: _isProfileLiked == true
                               ? CupertinoIcons.heart_fill
                               : CupertinoIcons.heart,
-                          label: _isProfileLiked == true ? 'Disukai' : 'Suka',
                           isActive: _isProfileLiked == true,
                           activeColor: const Color(0xFFFF2E93),
                           activeTextColor: Colors.white,
@@ -1118,7 +1116,6 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
                           icon: _isBookmarked == true
                               ? CupertinoIcons.bookmark_fill
                               : CupertinoIcons.bookmark,
-                          label: _isBookmarked == true ? 'Tersimpan' : 'Simpan',
                           isActive: _isBookmarked == true,
                           isDark: isDark,
                           onTap: () => _toggleBookmark(d),
@@ -1130,7 +1127,6 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
                       Expanded(
                         child: _buildSecondaryActionPill(
                           icon: CupertinoIcons.arrow_up_arrow_down,
-                          label: _sortNewestFirst ? 'Terbaru' : 'Terlama',
                           isActive: false,
                           isDark: isDark,
                           onTap: () => _showSortActionSheet(context),
@@ -1142,7 +1138,6 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
                       Expanded(
                         child: _buildSecondaryActionPill(
                           icon: CupertinoIcons.share,
-                          label: 'Bagikan',
                           isActive: false,
                           isDark: isDark,
                           onTap: () => _shareAnime(d),
@@ -1151,7 +1146,15 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
                     ],
                   ),
 
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 14),
+
+                  // ── MYANIMELIST SYNC CARD ─────────────────────────────
+                  MalDetailCard(
+                    animeTitle: d.title,
+                    animeId: widget.animeId,
+                  ),
+
+                  const SizedBox(height: 14),
 
                   // ── 4. APPLE APP STORE INSET GROUPED STATS CARD ──────────
                   Container(
@@ -1742,7 +1745,6 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
 
   Widget _buildSecondaryActionPill({
     required IconData icon,
-    required String label,
     required bool isActive,
     required bool isDark,
     required VoidCallback onTap,
@@ -1756,17 +1758,17 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 9),
+          height: 44,
           decoration: BoxDecoration(
             color: isActive
                 ? effectiveActiveBg
                 : (isDark
-                    ? Colors.white.withValues(alpha: 0.06)
+                    ? Colors.white.withValues(alpha: 0.07)
                     : Colors.black.withValues(alpha: 0.04)),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: isActive
                   ? effectiveActiveBg
@@ -1776,29 +1778,14 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
               width: 0.7,
             ),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 14,
-                color: isActive
-                    ? effectiveActiveFg
-                    : (iconColor ?? (isDark ? Colors.white70 : const Color(0xFF1C1C1E))),
-              ),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: isActive
-                      ? effectiveActiveFg
-                      : (isDark ? Colors.white : const Color(0xFF1C1C1E)),
-                  letterSpacing: -0.2,
-                ),
-              ),
-            ],
+          child: Center(
+            child: Icon(
+              icon,
+              size: 19,
+              color: isActive
+                  ? effectiveActiveFg
+                  : (iconColor ?? (isDark ? Colors.white70 : const Color(0xFF1C1C1E))),
+            ),
           ),
         ),
       ),
@@ -1815,8 +1802,8 @@ class _AnimeDetailScreenState extends State<AnimeDetailScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            top,
+          CountUpText(
+            text: top,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(

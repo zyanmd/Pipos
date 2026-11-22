@@ -2,7 +2,7 @@
 ; Moko Windows Installer
 
 #define MyAppName "Moko"
-#define MyAppVersion "1.2.8"
+#define MyAppVersion "1.2.9"
 #define MyAppPublisher "Moko Team"
 #define MyAppURL "https://github.com/zyanmd/Pipos"
 #define MyAppExeName "moko.exe"

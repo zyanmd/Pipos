@@ -6,6 +6,7 @@ import '../../features/auth/data/auth_repository.dart';
 import '../../features/auth/data/models/user_model.dart';
 import '../../features/chat/services/chat_theme_service.dart';
 import '../../features/profile/data/profile_repository.dart';
+import '../../features/gamification/data/gamification_repository.dart';
 import '../../features/profile/services/comment_theme_service.dart';
 import '../../core/services/onesignal_service.dart';
 
@@ -75,8 +76,21 @@ class AuthProvider extends ChangeNotifier {
         fresh = await AuthRepository.instance.me();
       }
       if (fresh.username.isNotEmpty) {
-        _user = fresh;
-        await TokenStore.saveUser(fresh);
+        UserModel userToSave = fresh;
+        try {
+          final summary = await GamificationRepository.instance.getXpSummary();
+          if (summary != null && summary.xp > userToSave.xp) {
+            userToSave = userToSave.copyWith(
+              xp: summary.xp,
+              level: summary.level,
+              streak: summary.streak,
+              rank: summary.rank,
+            );
+          }
+        } catch (_) {}
+
+        _user = userToSave;
+        await TokenStore.saveUser(userToSave);
         _notifyUserScope(_user);
         notifyListeners();
       }
@@ -224,11 +238,24 @@ class AuthProvider extends ChangeNotifier {
         fresh = await AuthRepository.instance.me();
       }
       if (fresh.username.isNotEmpty) {
-        _user = fresh;
-        await TokenStore.saveUser(fresh);
+        UserModel userToSave = fresh;
+        try {
+          final summary = await GamificationRepository.instance.getXpSummary();
+          if (summary != null && summary.xp > userToSave.xp) {
+            userToSave = userToSave.copyWith(
+              xp: summary.xp,
+              level: summary.level,
+              streak: summary.streak,
+              rank: summary.rank,
+            );
+          }
+        } catch (_) {}
+
+        _user = userToSave;
+        await TokenStore.saveUser(userToSave);
         _notifyUserScope(_user);
         notifyListeners();
-        return fresh;
+        return userToSave;
       }
     } catch (_) {}
     return _user;

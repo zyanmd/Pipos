@@ -128,9 +128,9 @@ class _DesktopSidebarState extends State<DesktopSidebar> {
                             onTap: () => _pushScreen(const NovelHomeScreen()),
                           ),
                           _buildNavItem(
-                            icon: CupertinoIcons.square_pencil,
-                            activeIcon: CupertinoIcons.pencil_ellipsis_rectangle,
-                            label: 'Ulas',
+                            icon: CupertinoIcons.play_rectangle,
+                            activeIcon: CupertinoIcons.play_rectangle_fill,
+                            label: 'Nobar',
                             active: widget.currentIndex == 2,
                             isDark: isDark,
                             onTap: () => widget.onTap(2),

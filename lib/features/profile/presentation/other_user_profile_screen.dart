@@ -7,6 +7,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../shared/providers/auth_provider.dart';
 import '../../../shared/widgets/decorated_avatar.dart';
 import '../../../shared/widgets/calm_gif.dart';
+import '../../../shared/widgets/glass_container.dart';
+import '../../../shared/widgets/bouncy_tap.dart';
+import '../../../shared/widgets/user_profile_card_modal.dart';
 import '../../../core/services/user_decor_resolver.dart';
 import '../../anime/data/anime_repository.dart';
 import '../../anime/presentation/anime_detail_screen.dart';
@@ -917,41 +920,69 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen>
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
-            SliverAppBar(
-              expandedHeight: 290,
-              pinned: true,
-              backgroundColor: bgColor,
-              elevation: 0,
-              leading: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: CircleAvatar(
-                  backgroundColor: (isDark ? Colors.black : Colors.white).withValues(alpha: 0.65),
-                  child: IconButton(
-                    icon: Icon(CupertinoIcons.back, color: isDark ? Colors.white : Colors.black, size: 20),
-                    onPressed: () => Navigator.pop(context),
+            SliverToBoxAdapter(
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  // 1. Full Cover Image Header (200px)
+                  SizedBox(
+                    height: 200,
+                    width: double.infinity,
+                    child: _buildCoverHeader(user, isDark),
                   ),
-                ),
-              ),
-              actions: [
-                if (!_isSelf)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 12),
-                    child: CircleAvatar(
-                      backgroundColor: (isDark ? Colors.black : Colors.white).withValues(alpha: 0.65),
-                      child: IconButton(
-                        icon: Icon(CupertinoIcons.chat_bubble_2_fill, color: isDark ? Colors.white : Colors.black, size: 18),
-                        tooltip: 'Mention di Chat',
-                        onPressed: _navigateToChatWithMention,
-                      ),
+
+                  // 2. Profile Details & Bento Card overlapping cover naturally
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 160),
+                      _buildProfileInfoAndActions(user, fontModel, isDark),
+                    ],
+                  ),
+
+                  // 3. Floating top bar action buttons (Back & Chat)
+                  Positioned(
+                    top: MediaQuery.of(context).padding.top + 8,
+                    left: 12,
+                    right: 12,
+                    child: Row(
+                      children: [
+                        GlassContainer(
+                          borderRadius: BorderRadius.circular(20),
+                          blur: 0,
+                          padding: EdgeInsets.zero,
+                          color: (isDark ? Colors.black : Colors.white).withValues(alpha: 0.55),
+                          border: Border.all(
+                            color: isDark ? Colors.white24 : Colors.black12,
+                            width: 0.8,
+                          ),
+                          child: IconButton(
+                            icon: Icon(CupertinoIcons.back, color: isDark ? Colors.white : Colors.black, size: 20),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ),
+                        const Spacer(),
+                        if (!_isSelf)
+                          GlassContainer(
+                            borderRadius: BorderRadius.circular(20),
+                            blur: 0,
+                            padding: EdgeInsets.zero,
+                            color: (isDark ? Colors.black : Colors.white).withValues(alpha: 0.55),
+                            border: Border.all(
+                              color: isDark ? Colors.white24 : Colors.black12,
+                              width: 0.8,
+                            ),
+                            child: IconButton(
+                              icon: Icon(CupertinoIcons.chat_bubble_2_fill, color: isDark ? Colors.white : Colors.black, size: 18),
+                              tooltip: 'Mention di Chat',
+                              onPressed: _navigateToChatWithMention,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-              ],
-              flexibleSpace: FlexibleSpaceBar(
-                background: _buildCoverAndAvatarHeader(user, isDark),
+                ],
               ),
-            ),
-            SliverToBoxAdapter(
-              child: _buildProfileInfoAndActions(user, fontModel, isDark),
             ),
             SliverPersistentHeader(
               pinned: true,
@@ -997,12 +1028,10 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen>
     );
   }
 
-  // ─── COVER & AVATAR HEADER (APPLE HIG MINIMALIST DESIGN) ───
+  // ─── COVER HEADER (180PX SMOOTH BLEND) ───
 
-  Widget _buildCoverAndAvatarHeader(UserModel? user, bool isDark) {
+  Widget _buildCoverHeader(UserModel? user, bool isDark) {
     final coverUrl = user?.coverUrl;
-    final avatarUrl = user?.avatarUrl;
-    final decorUrl = user?.avatarDecorationUrl;
     final bgColor = isDark ? const Color(0xFF000000) : const Color(0xFFF2F2F7);
 
     return Stack(
@@ -1027,52 +1056,10 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen>
                 end: Alignment.bottomCenter,
                 colors: [
                   Colors.black.withValues(alpha: 0.15),
-                  Colors.black.withValues(alpha: isDark ? 0.65 : 0.35),
+                  Colors.black.withValues(alpha: isDark ? 0.60 : 0.25),
                   bgColor,
                 ],
-              ),
-            ),
-          ),
-        ),
-        // Apple HIG Monochrome Avatar Ring
-        Positioned(
-          bottom: 12,
-          left: 0,
-          right: 0,
-          child: Center(
-            child: Container(
-              width: 104,
-              height: 104,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
-                border: (decorUrl != null && decorUrl.isNotEmpty)
-                    ? null
-                    : Border.all(
-                        color: isDark ? Colors.white24 : Colors.black12,
-                        width: 2.5,
-                      ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.40 : 0.10),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(2.5),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: bgColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: DecoratedAvatar(
-                    avatarUrl: avatarUrl,
-                    decorationUrl: decorUrl,
-                    radius: 46,
-                  ),
-                ),
+                stops: const [0.0, 0.65, 1.0],
               ),
             ),
           ),
@@ -1096,7 +1083,7 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen>
     );
   }
 
-  // ─── PROFILE INFO & MONOCHROME STYLED USERNAME DENGAN CUSTOM FONT ───
+  // ─── PROFILE INFO & BENTO GLASS CARD ───
 
   Widget _buildProfileInfoAndActions(UserModel? user, ProfileFontModel? fontModel, bool isDark) {
     final rawDisplayName = user?.displayName?.isNotEmpty == true
@@ -1104,323 +1091,447 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen>
         : (user?.username ?? widget.username);
     final role = user?.role ?? 'Member';
     final bio = user?.bio ?? '';
-    final textPrimary = isDark ? Colors.white : Colors.black;
-    final textSecondary = isDark ? Colors.white60 : Colors.black54;
-    final borderColor = isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.08);
+    final avatarUrl = user?.avatarUrl;
+    final decorUrl = user?.avatarDecorationUrl;
+    final bdayTagText = _formatBirthdayTag(user);
+    final loc = user?.location?.trim();
+    final hasLocation = loc != null && loc.isNotEmpty;
+    final web = user?.website?.trim();
+    final hasWebsite = web != null && web.isNotEmpty;
+    final totalLikes = _animeFavorites.length + _comicFavorites.length;
+    final likedCount = totalLikes > 0 ? totalLikes : _bookmarkCount;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Display Name
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: Text(
-                  rawDisplayName,
-                  textAlign: TextAlign.center,
-                  style: _heroTextStyle(
-                    fontModel,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: textPrimary,
-                    letterSpacing: -0.4,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (user?.verifiedBadge == true) ...[
-                const SizedBox(width: 5),
-                const Icon(
-                  CupertinoIcons.checkmark_seal_fill,
-                  size: 20,
-                  color: Color(0xFF007AFF),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 6),
-
-          // Stylized Monochrome Username Pill with Copy Button
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1C1C1E) : Colors.black.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: borderColor,
-                width: 0.8,
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // ── 1. Hero Bento Card (Overlaps Cover naturally without negative offset) ──────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: GlassContainer(
+            borderRadius: BorderRadius.circular(24),
+            blur: 0,
+            clipBehavior: Clip.none,
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.12)
+                  : Colors.black.withValues(alpha: 0.08),
+              width: 0.8,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Icon(CupertinoIcons.at, size: 13, color: textSecondary),
-                const SizedBox(width: 3),
-                Text(
-                  user?.username ?? widget.username,
-                  style: _heroTextStyle(
-                    fontModel,
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: textPrimary,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                GestureDetector(
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    Clipboard.setData(ClipboardData(text: user?.username ?? widget.username));
-                    _showToast('Username @${user?.username ?? widget.username} disalin!');
-                  },
-                  child: Icon(
-                    CupertinoIcons.doc_on_doc,
-                    size: 13,
-                    color: textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          // Role Badge & Anime Badge
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            alignment: WrapAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: borderColor),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+                // Row: Avatar + User Details
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(CupertinoIcons.shield_lefthalf_fill, size: 11, color: textPrimary),
-                    const SizedBox(width: 4),
-                    Text(
-                      role.toUpperCase(),
-                      style: _heroTextStyle(
-                        fontModel,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        color: textPrimary,
-                        letterSpacing: 0.4,
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: DecoratedAvatar(
+                          radius: 38,
+                          avatarUrl: avatarUrl,
+                          decorationUrl: decorUrl,
+                          decorationCode: user?.avatarDecorationCode,
+                          decorationScale: user?.avatarDecorationScale ?? 1.0,
+                          offsetX: user?.avatarDecorationOffsetX ?? 0,
+                          offsetY: user?.avatarDecorationOffsetY ?? 0,
+                          fallbackName: rawDisplayName,
+                          borderWidth: (decorUrl != null && decorUrl.isNotEmpty) ? 0.0 : 2.5,
+                          borderColor: isDark ? const Color(0xFF1E1E24) : Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Display Name + Badges
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    rawDisplayName,
+                                    style: _heroTextStyle(
+                                      fontModel,
+                                      fontSize: 19,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: -0.4,
+                                      color: isDark ? Colors.white : const Color(0xFF1C1C1E),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (user?.verifiedBadge == true) ...[
+                                  const SizedBox(width: 4),
+                                  const Icon(
+                                    CupertinoIcons.checkmark_seal_fill,
+                                    size: 16,
+                                    color: Color(0xFF007AFF),
+                                  ),
+                                ],
+                                if (user?.isAdmin == true) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
+                                      borderRadius: BorderRadius.circular(5),
+                                      border: Border.all(
+                                        color: isDark ? Colors.white24 : Colors.black12,
+                                        width: 0.5,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(CupertinoIcons.shield_lefthalf_fill, size: 8, color: isDark ? Colors.white : Colors.black),
+                                        const SizedBox(width: 2),
+                                        Text(
+                                          'ADMIN',
+                                          style: _heroTextStyle(
+                                            fontModel,
+                                            fontSize: 8.5,
+                                            fontWeight: FontWeight.w800,
+                                            color: isDark ? Colors.white : Colors.black,
+                                            letterSpacing: 0.4,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+
+                            const SizedBox(height: 5),
+
+                            // Metadata row: @username & chips
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                GestureDetector(
+                                  onTap: () {
+                                    HapticFeedback.selectionClick();
+                                    Clipboard.setData(ClipboardData(text: user?.username ?? widget.username));
+                                    _showToast('Username @${user?.username ?? widget.username} disalin!');
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                    decoration: BoxDecoration(
+                                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.07),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: isDark ? Colors.white10 : Colors.black12, width: 0.5),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(CupertinoIcons.at, size: 10, color: isDark ? Colors.white60 : Colors.black45),
+                                        const SizedBox(width: 2),
+                                        Text(
+                                          user?.username ?? widget.username,
+                                          style: _heroTextStyle(
+                                            fontModel,
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w600,
+                                            color: isDark ? Colors.white70 : Colors.black87,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 3),
+                                        Icon(CupertinoIcons.doc_on_doc, size: 9, color: isDark ? Colors.white38 : Colors.black38),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+
+                                // Role Badge
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                  decoration: BoxDecoration(
+                                    color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.07),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: isDark ? Colors.white10 : Colors.black12, width: 0.5),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(CupertinoIcons.shield_lefthalf_fill, size: 9, color: isDark ? Colors.white70 : Colors.black54),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        role.toUpperCase(),
+                                        style: _heroTextStyle(
+                                          fontModel,
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: isDark ? Colors.white70 : Colors.black87,
+                                          letterSpacing: 0.3,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                if (_equippedGenreRole != null)
+                                  GenreRoleBadge(
+                                    role: _equippedGenreRole!,
+                                    compact: true,
+                                    isDark: isDark,
+                                    onTap: () {
+                                      showGenreRoleDetailModal(
+                                        context,
+                                        _equippedGenreRole!,
+                                        isDark: isDark,
+                                        onEquipChanged: _loadAll,
+                                      );
+                                    },
+                                  ),
+
+                                if (hasLocation)
+                                  _buildMetaTag(
+                                    icon: CupertinoIcons.location_solid,
+                                    label: loc,
+                                    isDark: isDark,
+                                    fontModel: fontModel,
+                                  ),
+
+                                if (hasWebsite)
+                                  GestureDetector(
+                                    onTap: () async {
+                                      HapticFeedback.selectionClick();
+                                      var target = web;
+                                      if (!target.startsWith('http://') && !target.startsWith('https://')) {
+                                        target = 'https://$target';
+                                      }
+                                      final uri = Uri.tryParse(target);
+                                      if (uri != null && await canLaunchUrl(uri)) {
+                                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                      }
+                                    },
+                                    child: _buildMetaTag(
+                                      icon: CupertinoIcons.link,
+                                      label: web,
+                                      isDark: isDark,
+                                      fontModel: fontModel,
+                                    ),
+                                  ),
+
+                                if (bdayTagText != null)
+                                  _buildMetaTag(
+                                    icon: _isBirthdayToday(user) ? CupertinoIcons.gift_fill : CupertinoIcons.gift,
+                                    label: bdayTagText,
+                                    isDark: isDark,
+                                    fontModel: fontModel,
+                                    isFestive: _isBirthdayToday(user),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Bio Container
+                  if (bio.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark ? Colors.white.withValues(alpha: 0.06) : Colors.black.withValues(alpha: 0.04),
+                          width: 0.5,
+                        ),
+                      ),
+                      child: Text(
+                        bio,
+                        style: _heroTextStyle(
+                          fontModel,
+                          fontSize: 12.5,
+                          color: isDark ? Colors.white70 : const Color(0xFF3C3C43),
+                          height: 1.35,
+                          letterSpacing: -0.1,
+                        ),
                       ),
                     ),
                   ],
-                ),
-              ),
-              if (_equippedGenreRole != null)
-                GenreRoleBadge(
-                  role: _equippedGenreRole!,
-                  compact: true,
-                  isDark: isDark,
-                  onTap: () {
-                    showGenreRoleDetailModal(
-                      context,
-                      _equippedGenreRole!,
-                      isDark: isDark,
-                      onEquipChanged: _loadAll,
-                    );
-                  },
-                )
-              else if (_isMe)
-                GestureDetector(
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    showGenreRoleCatalogModal(context, isDark: isDark);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
-                    decoration: BoxDecoration(
-                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.06),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: borderColor),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(CupertinoIcons.sparkles, size: 11, color: Color(0xFFEAB308)),
-                        const SizedBox(width: 4),
-                        Text(
-                          'PASANG ROLE GENRE',
-                          style: _heroTextStyle(
-                            fontModel,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.white70 : Colors.black87,
-                            letterSpacing: 0.4,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
 
-          // Bio in Clean Dialogue Bubble
-          if (bio.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: borderColor,
-                  width: 0.8,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Text('“', style: TextStyle(fontSize: 20, color: textSecondary, fontWeight: FontWeight.bold)),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      bio,
-                      style: _heroTextStyle(
-                        fontModel,
-                        fontSize: 12.5,
-                        color: textPrimary,
-                        height: 1.35,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  Text('”', style: TextStyle(fontSize: 20, color: textSecondary, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 14),
+
+                  // Action Buttons row inside Hero Card
+                  _buildBentoActionButtons(fontModel, isDark),
                 ],
               ),
             ),
-          ],
+          ),
 
-          // Location, Birthday & Website / Social Media meta tags
-          () {
-            final loc = user?.location?.trim();
-            final hasLocation = loc != null && loc.isNotEmpty;
-            final bdayText = _formatBirthdayTag(user);
-            final web = user?.website?.trim();
-            final hasWebsite = web != null && web.isNotEmpty;
-            if (!hasLocation && bdayText == null && !hasWebsite) return const SizedBox.shrink();
-
-            return Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 6,
-                alignment: WrapAlignment.center,
+        // ── 2. Bento Statistics Grid ──────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Column(
+            children: [
+              // Row 1: Anime Ditonton & Komik Dibaca (2 wide cards)
+              Row(
                 children: [
-                  if (hasLocation)
-                    _buildMetaTag(
-                      icon: CupertinoIcons.location_solid,
-                      label: loc,
+                  Expanded(
+                    child: _buildBentoStatCard(
+                      icon: CupertinoIcons.play_circle_fill,
+                      accentColor: const Color(0xFFFF2D55),
+                      value: '$_watchCount',
+                      label: 'Anime Ditonton',
+                      subtitle: 'Riwayat tontonan',
                       isDark: isDark,
                       fontModel: fontModel,
-                    ),
-                  if (hasWebsite)
-                    GestureDetector(
-                      onTap: () async {
+                      onTap: () {
                         HapticFeedback.selectionClick();
-                        var target = web;
-                        if (!target.startsWith('http://') && !target.startsWith('https://')) {
-                          target = 'https://$target';
-                        }
-                        final uri = Uri.tryParse(target);
-                        if (uri != null && await canLaunchUrl(uri)) {
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        if (_tabController.length > 0) {
+                          _tabController.animateTo(0);
                         }
                       },
-                      child: _buildMetaTag(
-                        icon: CupertinoIcons.link,
-                        label: web,
-                        isDark: isDark,
-                        fontModel: fontModel,
-                      ),
                     ),
-                  if (bdayText != null)
-                    _buildMetaTag(
-                      icon: _isBirthdayToday(user) ? CupertinoIcons.gift_fill : CupertinoIcons.gift,
-                      label: bdayText,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _buildBentoStatCard(
+                      icon: CupertinoIcons.book_fill,
+                      accentColor: const Color(0xFF007AFF),
+                      value: '$_comicReadCount',
+                      label: 'Komik Dibaca',
+                      subtitle: 'Riwayat bacaan',
                       isDark: isDark,
                       fontModel: fontModel,
-                      isFestive: _isBirthdayToday(user),
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        if (_tabController.length > 0) {
+                          _tabController.animateTo(0);
+                        }
+                      },
                     ),
+                  ),
                 ],
               ),
-            );
-          }(),
 
-          const SizedBox(height: 14),
+              const SizedBox(height: 10),
 
-          // Action Buttons: Friend Request & Chat
-          _buildFriendActionSection(fontModel, isDark),
+              // Row 2: Disukai, Teman, Durasi (3 compact cards)
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildBentoCompactStatCard(
+                      icon: CupertinoIcons.heart_fill,
+                      accentColor: const Color(0xFFFF9500),
+                      value: '$likedCount',
+                      label: 'Disukai',
+                      isDark: isDark,
+                      fontModel: fontModel,
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        if (_tabController.length > 0) {
+                          _tabController.animateTo(0);
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildBentoCompactStatCard(
+                      icon: CupertinoIcons.person_2_fill,
+                      accentColor: const Color(0xFF34C759),
+                      value: '$_friendCount',
+                      label: 'Teman',
+                      isDark: isDark,
+                      fontModel: fontModel,
+                      onTap: _handleFriendsStatTap,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildBentoCompactStatCard(
+                      icon: CupertinoIcons.bolt_fill,
+                      accentColor: const Color(0xFFAF52DE),
+                      value: _watchDuration.isNotEmpty ? _formatCompactDuration(_watchDuration) : (user?.role?.toUpperCase() ?? 'AKTIF'),
+                      label: _watchDuration.isNotEmpty ? 'Durasi' : 'Status',
+                      isDark: isDark,
+                      fontModel: fontModel,
+                      onTap: () {
+                        if (user != null) {
+                          HapticFeedback.selectionClick();
+                          showUserProfileCard(context, user: user);
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
 
-          const SizedBox(height: 14),
-
-          // Level & XP Gamification Card
-          if (_user != null) ...[
-            LevelXpCard(user: _user),
-            const SizedBox(height: 14),
-          ],
-
-          // ─── STATS BAR: ANIME, KOMIK, BOOKMARK, DURASI ───
-          _buildMedsosStatsBar(fontModel, isDark),
-
-          const SizedBox(height: 10),
-        ],
-      ),
+        // ── 3. Level & XP Gamification Card ───────────────────
+        if (_user != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: LevelXpCard(user: _user),
+          ),
+      ],
     );
   }
 
-  Widget _buildFriendActionSection(ProfileFontModel? fontModel, bool isDark) {
-    if (_isLoadingFriendship) {
+  // Bento Action Buttons
+  Widget _buildBentoActionButtons(ProfileFontModel? fontModel, bool isDark) {
+    if (_isLoadingFriendship || _isFriendActionLoading) {
       return const SizedBox(
-        height: 44,
+        height: 38,
         child: Center(child: CupertinoActivityIndicator()),
       );
     }
 
     if (_isSelf) {
-      return SizedBox(
-        width: double.infinity,
-        height: 40,
-        child: ElevatedButton.icon(
-          onPressed: () {
-            final authUser = _user ?? context.read<AuthProvider>().user;
-            if (authUser != null) {
-              Navigator.push(
-                context,
-                CupertinoPageRoute(builder: (_) => EditProfileScreen(user: authUser)),
-              ).then((_) => _loadUserProfileAndStats());
-            }
-          },
-          icon: Icon(CupertinoIcons.pencil, size: 16, color: isDark ? Colors.white : Colors.black),
-          label: Text('Edit Profil Saya', style: _heroTextStyle(fontModel, color: isDark ? Colors.white : Colors.black, fontSize: 13, fontWeight: FontWeight.w600)),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-            foregroundColor: isDark ? Colors.white : Colors.black,
-            elevation: 0,
-            side: BorderSide(color: isDark ? Colors.white12 : Colors.black12, width: 0.8),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      return BouncyTap(
+        scaleDown: 0.96,
+        onTap: () {
+          final authUser = _user ?? context.read<AuthProvider>().user;
+          if (authUser != null) {
+            Navigator.push(
+              context,
+              CupertinoPageRoute(builder: (_) => EditProfileScreen(user: authUser)),
+            ).then((_) => _loadUserProfileAndStats());
+          }
+        },
+        child: Container(
+          height: 38,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white : Colors.black,
+            borderRadius: BorderRadius.circular(19),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.12),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(CupertinoIcons.pencil, size: 14, color: isDark ? Colors.black : Colors.white),
+              const SizedBox(width: 6),
+              Text(
+                'Edit Profil',
+                style: _heroTextStyle(
+                  fontModel,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? Colors.black : Colors.white,
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -1428,44 +1539,54 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen>
 
     final status = _friendship?.status ?? FriendStatus.none;
 
-    if (_isFriendActionLoading) {
-      return const SizedBox(
-        height: 44,
-        child: Center(child: CupertinoActivityIndicator()),
-      );
-    }
-
     switch (status) {
       case FriendStatus.friends:
         return Row(
           children: [
             Expanded(
-              flex: 2,
-              child: ElevatedButton.icon(
-                onPressed: _showFriendsMenu,
-                icon: Icon(CupertinoIcons.checkmark_seal_fill, size: 16, color: isDark ? Colors.white : Colors.black),
-                label: Text('Berteman', style: _heroTextStyle(fontModel, color: isDark ? Colors.white : Colors.black, fontWeight: FontWeight.bold, fontSize: 13)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFE5E5EA),
-                  foregroundColor: isDark ? Colors.white : Colors.black,
-                  side: BorderSide(color: isDark ? Colors.white12 : Colors.black12, width: 0.8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  elevation: 0,
+              flex: 1,
+              child: BouncyTap(
+                scaleDown: 0.96,
+                onTap: _showFriendsMenu,
+                child: Container(
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
+                    borderRadius: BorderRadius.circular(19),
+                    border: Border.all(
+                      color: isDark ? Colors.white24 : Colors.black12,
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(CupertinoIcons.checkmark_seal_fill, size: 15, color: isDark ? const Color(0xFF34C759) : const Color(0xFF28A745)),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Berteman',
+                        style: _heroTextStyle(
+                          fontModel,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white : Colors.black,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: ElevatedButton.icon(
-                onPressed: _navigateToChatWithMention,
-                icon: Icon(CupertinoIcons.chat_bubble_fill, size: 14, color: isDark ? Colors.black : Colors.white),
-                label: Text('Pesan', style: _heroTextStyle(fontModel, color: isDark ? Colors.black : Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isDark ? Colors.white : Colors.black,
-                  foregroundColor: isDark ? Colors.black : Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                ),
+              flex: 1,
+              child: _buildBentoPillButton(
+                icon: CupertinoIcons.chat_bubble_fill,
+                label: 'Pesan',
+                isDark: isDark,
+                fontModel: fontModel,
+                onTap: _navigateToChatWithMention,
               ),
             ),
           ],
@@ -1475,69 +1596,104 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen>
         return Row(
           children: [
             Expanded(
-              child: ElevatedButton.icon(
-                onPressed: _cancelFriendRequest,
-                icon: Icon(CupertinoIcons.clock_fill, size: 16, color: isDark ? Colors.white70 : Colors.black87),
-                label: Text('Menunggu Persetujuan (Batalkan)', style: _heroTextStyle(fontModel, color: isDark ? Colors.white70 : Colors.black87, fontSize: 13)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFE5E5EA),
-                  foregroundColor: isDark ? Colors.white70 : Colors.black87,
-                  side: BorderSide(color: isDark ? Colors.white24 : Colors.black26, width: 0.8),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              flex: 5,
+              child: BouncyTap(
+                scaleDown: 0.96,
+                onTap: _cancelFriendRequest,
+                child: Container(
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
+                    borderRadius: BorderRadius.circular(19),
+                    border: Border.all(
+                      color: isDark ? Colors.white24 : Colors.black12,
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(CupertinoIcons.clock_fill, size: 14, color: isDark ? Colors.white70 : Colors.black54),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Menunggu (Batal)',
+                        style: _heroTextStyle(
+                          fontModel,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white70 : Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 4,
+              child: _buildBentoPillButton(
+                icon: CupertinoIcons.at,
+                label: 'Mention',
+                isDark: isDark,
+                fontModel: fontModel,
+                onTap: _navigateToChatWithMention,
               ),
             ),
           ],
         );
 
       case FriendStatus.pendingReceived:
-        return Column(
+        return Row(
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              margin: const EdgeInsets.only(bottom: 8),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: isDark ? Colors.white12 : Colors.black12, width: 0.8),
-              ),
-              child: Text(
-                _friendship?.message?.isNotEmpty == true
-                    ? 'Pesan: "${_friendship!.message}"'
-                    : '@${widget.username} mengirim permintaan berteman untukmu!',
-                style: _heroTextStyle(fontModel, fontSize: 12, color: isDark ? Colors.white70 : Colors.black87),
-                textAlign: TextAlign.center,
+            Expanded(
+              flex: 5,
+              child: BouncyTap(
+                scaleDown: 0.96,
+                onTap: _acceptFriendRequest,
+                child: Container(
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white : Colors.black,
+                    borderRadius: BorderRadius.circular(19),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.12),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(CupertinoIcons.person_badge_plus_fill, size: 14, color: isDark ? Colors.black : Colors.white),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Terima',
+                        style: _heroTextStyle(
+                          fontModel,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.black : Colors.white,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _acceptFriendRequest,
-                    icon: Icon(CupertinoIcons.person_badge_plus_fill, size: 16, color: isDark ? Colors.black : Colors.white),
-                    label: Text('Terima', style: _heroTextStyle(fontModel, color: isDark ? Colors.black : Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isDark ? Colors.white : Colors.black,
-                      foregroundColor: isDark ? Colors.black : Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _rejectFriendRequest,
-                    icon: Icon(CupertinoIcons.xmark, size: 16, color: isDark ? Colors.white70 : Colors.black87),
-                    label: Text('Tolak', style: _heroTextStyle(fontModel, color: isDark ? Colors.white70 : Colors.black87, fontSize: 13)),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: isDark ? Colors.white24 : Colors.black26),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                    ),
-                  ),
-                ),
-              ],
+            const SizedBox(width: 8),
+            Expanded(
+              flex: 4,
+              child: _buildBentoPillButton(
+                icon: CupertinoIcons.xmark,
+                label: 'Tolak',
+                isDark: isDark,
+                fontModel: fontModel,
+                onTap: _rejectFriendRequest,
+              ),
             ),
           ],
         );
@@ -1547,32 +1703,52 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen>
         return Row(
           children: [
             Expanded(
-              flex: 2,
-              child: ElevatedButton.icon(
-                onPressed: _showAddFriendDialog,
-                icon: Icon(CupertinoIcons.person_badge_plus_fill, size: 16, color: isDark ? Colors.black : Colors.white),
-                label: Text('Tambah Teman', style: _heroTextStyle(fontModel, color: isDark ? Colors.black : Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isDark ? Colors.white : Colors.black,
-                  foregroundColor: isDark ? Colors.black : Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              flex: 1,
+              child: BouncyTap(
+                scaleDown: 0.96,
+                onTap: _showAddFriendDialog,
+                child: Container(
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white : Colors.black,
+                    borderRadius: BorderRadius.circular(19),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.12),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(CupertinoIcons.person_badge_plus_fill, size: 14, color: isDark ? Colors.black : Colors.white),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Tambah Teman',
+                        style: _heroTextStyle(
+                          fontModel,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.black : Colors.white,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: ElevatedButton.icon(
-                onPressed: _navigateToChatWithMention,
-                icon: Icon(CupertinoIcons.chat_bubble_fill, size: 14, color: isDark ? Colors.white : Colors.black),
-                label: Text('Chat', style: _heroTextStyle(fontModel, color: isDark ? Colors.white : Colors.black, fontSize: 13, fontWeight: FontWeight.w600)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isDark ? const Color(0xFF1C1C1E) : const Color(0xFFE5E5EA),
-                  foregroundColor: isDark ? Colors.white : Colors.black,
-                  elevation: 0,
-                  side: BorderSide(color: isDark ? Colors.white12 : Colors.black12, width: 0.8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                ),
+              flex: 1,
+              child: _buildBentoPillButton(
+                icon: CupertinoIcons.at,
+                label: 'Mention',
+                isDark: isDark,
+                fontModel: fontModel,
+                onTap: _navigateToChatWithMention,
               ),
             ),
           ],
@@ -1580,131 +1756,42 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen>
     }
   }
 
-  // ─── STATS BAR: ANIME, KOMIK, BOOKMARK, DURASI (PERSIS PROFILE CARD) ───
-
-  Widget _buildMedsosStatsBar(ProfileFontModel? fontModel, bool isDark) {
-    final totalLikes = _animeFavorites.length + _comicFavorites.length;
-    final likedCount = totalLikes > 0 ? totalLikes : _bookmarkCount;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.10) : Colors.black.withValues(alpha: 0.08),
-          width: 0.8,
-        ),
-      ),
-      child: Row(
-        children: [
-          // 1. Tontonan Anime
-          Expanded(
-            child: _buildStatItem(
-              icon: CupertinoIcons.play_circle_fill,
-              value: '$_watchCount',
-              label: 'Anime',
-              fontModel: fontModel,
-              isDark: isDark,
-            ),
-          ),
-          _statsDivider(isDark),
-
-          // 2. Bacaan Komik
-          Expanded(
-            child: _buildStatItem(
-              icon: CupertinoIcons.book_fill,
-              value: '$_comicReadCount',
-              label: 'Komik',
-              fontModel: fontModel,
-              isDark: isDark,
-            ),
-          ),
-          _statsDivider(isDark),
-
-          // 3. Jumlah Teman (angka jumlah temannya)
-          Expanded(
-            child: _buildStatItem(
-              icon: CupertinoIcons.person_2_fill,
-              value: '$_friendCount',
-              label: 'Teman',
-              fontModel: fontModel,
-              isDark: isDark,
-              onTap: _handleFriendsStatTap,
-            ),
-          ),
-
-          // 4. Disukai / Favorit (Hanya tampil jika likedCount > 0!)
-          if (likedCount > 0) ...[
-            _statsDivider(isDark),
-            Expanded(
-              child: _buildStatItem(
-                icon: CupertinoIcons.heart_fill,
-                value: '$likedCount',
-                label: 'Disukai',
-                fontModel: fontModel,
-                isDark: isDark,
-                onTap: () {
-                  if (_tabController.length > 0) {
-                    _tabController.animateTo(0);
-                  }
-                },
-              ),
-            ),
-          ],
-
-          _statsDivider(isDark),
-
-          // 5. Durasi / Status
-          Expanded(
-            child: _buildStatItem(
-              icon: CupertinoIcons.bolt_fill,
-              value: _watchDuration.isNotEmpty
-                  ? _watchDuration
-                  : (_user?.role?.toUpperCase() ?? 'AKTIF'),
-              label: _watchDuration.isNotEmpty ? 'Durasi' : 'Status',
-              fontModel: fontModel,
-              isDark: isDark,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _statsDivider(bool isDark) {
-    return Container(
-      width: 0.8,
-      height: 28,
-      color: isDark ? Colors.white12 : Colors.black12,
-    );
-  }
-
-  Widget _buildStatItem({
+  Widget _buildBentoPillButton({
     required IconData icon,
-    required String value,
     required String label,
-    required ProfileFontModel? fontModel,
     required bool isDark,
-    VoidCallback? onTap,
+    ProfileFontModel? fontModel,
+    required VoidCallback onTap,
   }) {
-    final col = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
+    return BouncyTap(
+      scaleDown: 0.96,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: GlassContainer(
+        height: 38,
+        borderRadius: BorderRadius.circular(19),
+        blur: 10,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.08),
+          width: 0.7,
+        ),
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 14, color: isDark ? Colors.white : Colors.black),
             const SizedBox(width: 4),
             Flexible(
               child: Text(
-                value,
+                label,
                 style: _heroTextStyle(
                   fontModel,
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                   color: isDark ? Colors.white : Colors.black,
+                  letterSpacing: -0.2,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -1712,31 +1799,181 @@ class _OtherUserProfileScreenState extends State<OtherUserProfileScreen>
             ),
           ],
         ),
-        const SizedBox(height: 3),
-        Text(
-          label,
-          style: _heroTextStyle(
-            fontModel,
-            fontSize: 11,
-            color: isDark ? Colors.white54 : Colors.black54,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
+      ),
     );
+  }
 
-    if (onTap != null) {
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        child: col,
-      );
+  // Bento Main Stat Card (Row 1) - iOS HIG Inset Card
+  Widget _buildBentoStatCard({
+    required IconData icon,
+    required Color accentColor,
+    required String value,
+    required String label,
+    required String subtitle,
+    required bool isDark,
+    ProfileFontModel? fontModel,
+    required VoidCallback onTap,
+  }) {
+    return BouncyTap(
+      scaleDown: 0.96,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06),
+            width: 0.6,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.20 : 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Center(
+                    child: Icon(icon, size: 17, color: accentColor),
+                  ),
+                ),
+                Icon(
+                  CupertinoIcons.chevron_forward,
+                  size: 13,
+                  color: isDark ? Colors.white.withValues(alpha: 0.25) : Colors.black.withValues(alpha: 0.2),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : const Color(0xFF1C1C1E),
+                letterSpacing: -0.6,
+              ),
+            ),
+            const SizedBox(height: 1),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white.withValues(alpha: 0.85) : const Color(0xFF3C3C43),
+                letterSpacing: -0.2,
+              ),
+            ),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w400,
+                color: isDark ? Colors.white38 : const Color(0xFF8E8E93),
+                letterSpacing: -0.1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Bento Compact Stat Card (Row 2) - iOS HIG Inset Card
+  Widget _buildBentoCompactStatCard({
+    required IconData icon,
+    required Color accentColor,
+    required String value,
+    required String label,
+    required bool isDark,
+    ProfileFontModel? fontModel,
+    required VoidCallback onTap,
+  }) {
+    return BouncyTap(
+      scaleDown: 0.96,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06),
+            width: 0.6,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.20 : 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: accentColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8.5),
+              ),
+              child: Center(
+                child: Icon(icon, size: 14, color: accentColor),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white : const Color(0xFF1C1C1E),
+                letterSpacing: -0.4,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: isDark ? Colors.white60 : const Color(0xFF8E8E93),
+                letterSpacing: -0.1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatCompactDuration(String raw) {
+    if (raw.isEmpty) return '0j';
+    if (raw.contains(':')) {
+      final parts = raw.split(':');
+      final hours = parts.isNotEmpty ? parts[0] : '0';
+      return '${hours}j';
     }
-    return col;
+    return raw;
   }
 
   // ─── TAB 1: ANIME & KOMIK DISUKAI (VERTIKAL KE BAWAH) ───

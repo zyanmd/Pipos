@@ -7,19 +7,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiConfig {
   ApiConfig._();
 
-  static const String defaultBaseUrl = 'http://103.119.237.37:2028';
+  static const String defaultBaseUrl = 'http://31.59.119.142:2028';
+  static const String ipv4BaseUrl = 'http://31.59.119.142:2028';
   static const String _kCustomBaseUrl = 'custom_api_base_url';
 
   static String _baseUrl = defaultBaseUrl;
 
   /// Base URL of the backend. Override dynamically for custom hosting.
-  /// Production Server: https://api.pipinipon.site
+  /// Production Server: http://31.59.119.142:2028
   /// Emulator:          http://10.0.2.2:5000
   /// iOS sim:           http://127.0.0.1:5000
   static String get baseUrl => _baseUrl;
   static const String apiPrefix = '/api';
 
-  /// Full API base, e.g. http://103.119.237.37:2028/api
+  /// Full API base, e.g. http://31.59.119.142:2028/api
   static String get apiBase => '$baseUrl$apiPrefix';
 
   /// Per-module bases
@@ -32,6 +33,7 @@ class ApiConfig {
   static String get novelBase => '$apiBase/novel';
   static String get zpicBase => '$apiBase/zpic';
   static String get javBase => '$apiBase/javtiful';
+  static String get nobarBase => '$ipv4BaseUrl$apiPrefix/nobar';
 
   static String get userLeaderboard => ApiEndpoints.userLeaderboard;
   static String get userXpMe => ApiEndpoints.userXpMe;
@@ -59,7 +61,7 @@ class ApiConfig {
     try {
       final prefs = await SharedPreferences.getInstance();
       final saved = prefs.getString(_kCustomBaseUrl);
-      if (saved != null && !saved.contains('103.119.237.37:2028')) {
+      if (saved != null && (!saved.contains('31.59.119.142:2028') || saved.contains('103.119.237.37'))) {
         await prefs.remove(_kCustomBaseUrl);
         _baseUrl = defaultBaseUrl;
       } else if (saved != null && saved.trim().isNotEmpty) {
@@ -127,6 +129,7 @@ class ApiConfig {
   static String sanitizeUrl(String raw) {
     var u = raw.trim();
     if (u.isEmpty || u.contains('103.119.237.37')) return defaultBaseUrl;
+    if (u.contains('31.59.119.142')) return defaultBaseUrl;
     if (!u.startsWith('http://') && !u.startsWith('https://')) {
       if (RegExp(r'^\d+\.\d+\.\d+\.\d+').hasMatch(u) || u.contains(':2028') || u.contains(':2026')) {
         u = 'http://$u';

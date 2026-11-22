@@ -1,5 +1,6 @@
 package com.moko.app
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -10,7 +11,9 @@ import android.os.Bundle
 import android.content.res.Configuration
 import android.app.PictureInPictureParams
 import android.content.pm.ActivityInfo
+import android.hardware.SensorManager
 import android.util.Rational
+import android.view.OrientationEventListener
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -21,9 +24,52 @@ class MainActivity : FlutterActivity() {
     private var pipChannel: MethodChannel? = null
     private var deepLinkChannel: MethodChannel? = null
     private var initialDeepLink: String? = null
+    private var fullscreenOrientationListener: OrientationEventListener? = null
+    private var isFullscreenLandscape = false
+
+    private fun startFullscreenOrientationListener() {
+        isFullscreenLandscape = true
+        if (fullscreenOrientationListener == null) {
+            fullscreenOrientationListener = object : OrientationEventListener(this, SensorManager.SENSOR_DELAY_NORMAL) {
+                override fun onOrientationChanged(orientation: Int) {
+                    if (orientation == ORIENTATION_UNKNOWN || !isFullscreenLandscape) return
+                    // 230..310 degrees -> Landscape normal (90 deg counter-clockwise)
+                    if (orientation in 230..310) {
+                        if (requestedOrientation != ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) {
+                            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                        }
+                    }
+                    // 50..130 degrees -> Reverse Landscape (270 deg counter-clockwise)
+                    else if (orientation in 50..130) {
+                        if (requestedOrientation != ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE) {
+                            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE
+                        }
+                    }
+                }
+            }
+        }
+        if (fullscreenOrientationListener?.canDetectOrientation() == true) {
+            fullscreenOrientationListener?.enable()
+        }
+    }
+
+    private fun stopFullscreenOrientationListener() {
+        isFullscreenLandscape = false
+        try {
+            fullscreenOrientationListener?.disable()
+        } catch (_: Exception) {}
+    }
+
+    override fun onPause() {
+        super.onPause()
+        stopFullscreenOrientationListener()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        try {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        } catch (_: Exception) {}
         com.moko.app.security.AntiTamper.verifyIntegrity(this)
         enableHighRefreshRate()
         initialDeepLink = extractDeepLinkUri(intent)
@@ -97,17 +143,43 @@ class MainActivity : FlutterActivity() {
                 "enterFullscreen" -> {
                     val isPortrait = call.argument<Boolean>("isPortrait") ?: false
                     try {
-                        requestedOrientation = if (isPortrait) {
-                            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                        if (isPortrait) {
+                            stopFullscreenOrientationListener()
+                            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
                         } else {
-                            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                            startFullscreenOrientationListener()
                         }
                     } catch (_: Exception) {}
                     result.success(true)
                 }
                 "exitFullscreen" -> {
                     try {
+                        stopFullscreenOrientationListener()
+                        // Restore brightness override
+                        val lp = window.attributes
+                        lp.screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                        window.attributes = lp
+
                         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                            try {
+                                if (requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT) {
+                                    requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                                }
+                            } catch (_: Exception) {}
+                        }, 1000)
+                    } catch (_: Exception) {}
+                    result.success(true)
+                }
+                "setBrightness" -> {
+                    val b = call.argument<Double>("brightness")?.toFloat() ?: -1.0f
+                    try {
+                        runOnUiThread {
+                            val lp = window.attributes
+                            lp.screenBrightness = if (b < 0f) WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE else b.coerceIn(0.01f, 1.0f)
+                            window.attributes = lp
+                        }
                     } catch (_: Exception) {}
                     result.success(true)
                 }
@@ -206,6 +278,85 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        // Setup Auto-Rotate Channel
+        val autoRotateChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.moko.app/auto_rotate")
+        autoRotateChannel.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "canModifySystemSettings" -> {
+                    result.success(canModifySystemSettings())
+                }
+                "openWriteSettings" -> {
+                    openWriteSettingsPermission()
+                    result.success(true)
+                }
+                "setSystemAutoRotate" -> {
+                    val enabled = call.argument<Boolean>("enabled") ?: false
+                    result.success(setSystemAutoRotate(enabled))
+                }
+                "isSystemAutoRotateEnabled" -> {
+                    result.success(isSystemAutoRotateEnabled())
+                }
+                "setAutoDisableOnExit" -> {
+                    val enabled = call.argument<Boolean>("enabled") ?: true
+                    try {
+                        val prefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+                        prefs.edit().putBoolean("flutter.auto_disable_rotate_on_exit", enabled).apply()
+                    } catch (_: Exception) {}
+                    result.success(true)
+                }
+                else -> result.notImplemented()
+            }
+        }
+    }
+
+    private fun canModifySystemSettings(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Settings.System.canWrite(this)
+        } else {
+            true
+        }
+    }
+
+    private fun openWriteSettingsPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
+                val intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS).apply {
+                    data = Uri.parse("package:$packageName")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(intent)
+            } catch (_: Exception) {
+                try {
+                    val intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    startActivity(intent)
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
+    private fun setSystemAutoRotate(enabled: Boolean): Boolean {
+        if (!canModifySystemSettings()) return false
+        return try {
+            Settings.System.putInt(
+                contentResolver,
+                Settings.System.ACCELEROMETER_ROTATION,
+                if (enabled) 1 else 0
+            )
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun isSystemAutoRotateEnabled(): Boolean {
+        return try {
+            Settings.System.getInt(contentResolver, Settings.System.ACCELEROMETER_ROTATION, 0) == 1
+        } catch (_: Exception) {
+            false
+        }
     }
 
     override fun onUserLeaveHint() {
@@ -234,7 +385,48 @@ class MainActivity : FlutterActivity() {
                 builder.setAutoEnterEnabled(false)
                 setPictureInPictureParams(builder.build())
             }
+            try {
+                val prefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+                val shouldDisable = prefs.getBoolean("flutter.auto_disable_rotate_on_exit", true)
+                if (shouldDisable) {
+                    setSystemAutoRotate(false)
+                }
+            } catch (_: Exception) {}
+            try {
+                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            } catch (_: Exception) {}
         }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        val isInPip = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) isInPictureInPictureMode else false
+        if (!isInPip) {
+            try {
+                val prefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+                val shouldDisable = prefs.getBoolean("flutter.auto_disable_rotate_on_exit", true)
+                if (shouldDisable) {
+                    setSystemAutoRotate(false)
+                }
+            } catch (_: Exception) {}
+            try {
+                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            } catch (_: Exception) {}
+        }
+    }
+
+    override fun onDestroy() {
+        try {
+            val prefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+            val shouldDisable = prefs.getBoolean("flutter.auto_disable_rotate_on_exit", true)
+            if (shouldDisable) {
+                setSystemAutoRotate(false)
+            }
+        } catch (_: Exception) {}
+        try {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        } catch (_: Exception) {}
+        super.onDestroy()
     }
 
     override fun onStart() {

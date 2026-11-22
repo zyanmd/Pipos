@@ -15,9 +15,13 @@ import '../data/models/comment_notification_model.dart';
 import '../data/notification_repository.dart';
 import '../services/universal_notification_service.dart';
 import '../../../core/services/onesignal_service.dart';
+import '../../announcement/data/models/announcement_model.dart';
+import '../../announcement/data/announcement_repository.dart';
+import '../../announcement/presentation/widgets/announcement_banner.dart';
 
 /// Notification category types for unified feed
 enum UnifiedNotifType {
+  announcement,
   commentLike,
   commentReply,
   chatMention,
@@ -25,7 +29,7 @@ enum UnifiedNotifType {
   birthday,
 }
 
-/// A unified notification model combining anime comments and chat notifications
+/// A unified notification model combining announcements, anime comments and chat notifications
 class UnifiedNotificationItem {
   final String id;
   final UnifiedNotifType type;
@@ -54,6 +58,8 @@ class UnifiedNotificationItem {
     required this.isRead,
     required this.originalObject,
   });
+
+  bool get isAnnouncement => type == UnifiedNotifType.announcement;
 
   bool get isComment =>
       type == UnifiedNotifType.commentLike ||
@@ -90,10 +96,11 @@ class UniversalNotificationModal extends StatefulWidget {
 }
 
 class _UniversalNotificationModalState extends State<UniversalNotificationModal> {
-  // 0: Semua (All), 1: Komen Anime, 2: Chat Umum
+  // 0: Semua (All), 1: Pengumuman, 2: Komen Anime, 3: Chat Umum
   int _selectedFilter = 0;
   bool _loading = false;
 
+  List<AnnouncementModel> _announcements = [];
   List<CommentNotificationModel> _commentsNotifs = [];
   List<ChatMentionItemModel> _chatMentions = [];
   List<ChatReplyNotificationItemModel> _chatReplies = [];
@@ -101,7 +108,7 @@ class _UniversalNotificationModalState extends State<UniversalNotificationModal>
   @override
   void initState() {
     super.initState();
-    _selectedFilter = (widget.initialTabIndex >= 0 && widget.initialTabIndex <= 2)
+    _selectedFilter = (widget.initialTabIndex >= 0 && widget.initialTabIndex <= 3)
         ? widget.initialTabIndex
         : 0;
     UserDecorResolver.instance.addListener(_onDecorUpdated);
@@ -125,6 +132,27 @@ class _UniversalNotificationModalState extends State<UniversalNotificationModal>
 
   List<UnifiedNotificationItem> get _unifiedItems {
     final List<UnifiedNotificationItem> items = [];
+
+    // Add Announcements
+    for (final a in _announcements) {
+      final isRead = AnnouncementRepository.instance.isRead(a.id);
+      items.add(
+        UnifiedNotificationItem(
+          id: 'announcement_${a.id}',
+          type: UnifiedNotifType.announcement,
+          actorUsername: 'Moko Official',
+          actorAvatar: null,
+          isActorVerified: true,
+          title: a.title,
+          subtitle: a.badge.isNotEmpty ? a.badge : 'PENGUMUMAN',
+          previewText: a.content,
+          createdAt: a.createdAt,
+          rawCreatedAt: a.createdAt?.toIso8601String(),
+          isRead: isRead,
+          originalObject: a,
+        ),
+      );
+    }
 
     // Add Anime Comment & Birthday notifications
     for (final n in _commentsNotifs) {
@@ -223,8 +251,10 @@ class _UniversalNotificationModalState extends State<UniversalNotificationModal>
   List<UnifiedNotificationItem> get _filteredItems {
     final all = _unifiedItems;
     if (_selectedFilter == 1) {
-      return all.where((i) => i.isComment).toList();
+      return all.where((i) => i.isAnnouncement).toList();
     } else if (_selectedFilter == 2) {
+      return all.where((i) => i.isComment).toList();
+    } else if (_selectedFilter == 3) {
       return all.where((i) => i.isChat).toList();
     }
     return all;
@@ -239,6 +269,7 @@ class _UniversalNotificationModalState extends State<UniversalNotificationModal>
         NotificationRepository.instance.getCommentNotifications(limit: 50),
         ChatRepository.instance.getMentions(page: 1, perPage: 40),
         ChatRepository.instance.getReplyNotifications(page: 1, perPage: 40),
+        AnnouncementRepository.instance.fetchActiveAnnouncements(forceRefresh: true),
       ]);
 
       if (!mounted) return;
@@ -246,23 +277,17 @@ class _UniversalNotificationModalState extends State<UniversalNotificationModal>
       final comments = results[0] as List<CommentNotificationModel>;
       final mentions = results[1] as List<ChatMentionItemModel>;
       final replies = results[2] as List<ChatReplyNotificationItemModel>;
+      final announcements = AnnouncementRepository.instance.allAnnouncements;
 
       setState(() {
         _commentsNotifs = comments;
         _chatMentions = mentions;
         _chatReplies = replies;
+        _announcements = announcements;
         _loading = false;
       });
 
-      // Synchronize unread notifiers accurately
-      final int commentUnread = comments.where((c) => !c.isRead).length;
-      final int chatUnread = mentions.where((m) => !m.isRead).length +
-          replies.where((r) => !r.isRead).length;
-
-      UniversalNotificationService.instance.commentUnreadNotifier.value = commentUnread;
-      UniversalNotificationService.instance.chatUnreadNotifier.value = chatUnread;
-      UniversalNotificationService.instance.totalUnreadNotifier.value =
-          commentUnread + chatUnread;
+      UniversalNotificationService.instance.refreshUnreadCounts();
 
       // Automatically register avatars & resolve profile decorations for notification actors
       final usernames = <String?>{};
@@ -452,8 +477,20 @@ class _UniversalNotificationModalState extends State<UniversalNotificationModal>
     );
   }
 
+  Future<void> _onAnnouncementTap(AnnouncementModel a) async {
+    HapticFeedback.lightImpact();
+    await AnnouncementRepository.instance.markAsRead(a.id);
+    UniversalNotificationService.instance.refreshUnreadCounts();
+    if (mounted) setState(() {});
+    if (mounted) {
+      AnnouncementBanner.showDetail(context, a);
+    }
+  }
+
   void _onItemTap(UnifiedNotificationItem item) {
-    if (item.type == UnifiedNotifType.commentLike || item.type == UnifiedNotifType.commentReply) {
+    if (item.type == UnifiedNotifType.announcement) {
+      _onAnnouncementTap(item.originalObject as AnnouncementModel);
+    } else if (item.type == UnifiedNotifType.commentLike || item.type == UnifiedNotifType.commentReply) {
       _onCommentTap(item.originalObject as CommentNotificationModel);
     } else if (item.type == UnifiedNotifType.chatMention) {
       _onMentionTap(item.originalObject as ChatMentionItemModel);
@@ -528,10 +565,11 @@ class _UniversalNotificationModalState extends State<UniversalNotificationModal>
     final screenHeight = media.size.height;
     final bottomInset = media.padding.bottom;
 
+    final announcementUnread = _announcements.where((a) => !AnnouncementRepository.instance.isRead(a.id)).length;
     final commentUnread = _commentsNotifs.where((c) => !c.isRead).length;
     final chatUnread = _chatMentions.where((m) => !m.isRead).length +
         _chatReplies.where((r) => !r.isRead).length;
-    final totalUnread = commentUnread + chatUnread;
+    final totalUnread = announcementUnread + commentUnread + chatUnread;
 
     final items = _filteredItems;
 
@@ -710,44 +748,130 @@ class _UniversalNotificationModalState extends State<UniversalNotificationModal>
             ),
           ),
 
-          // Segment Filter Tabs (Semua, Komen Anime, Chat Umum)
+          // Notification Permission Prompt Card (if disabled)
+          if (!OneSignalService.instance.hasNotificationPermission)
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 2, 16, 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E22) : const Color(0xFFF2F2F7),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.12),
+                  width: 0.8,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFFFF9500).withValues(alpha: 0.15),
+                    ),
+                    child: const Icon(CupertinoIcons.bell_fill, color: Color(0xFFFF9500), size: 16),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Izin Notifikasi HP Belum Aktif',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 1),
+                        Text(
+                          'Aktifkan agar update episode & pengumuman muncul di HP.',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            color: isDark ? Colors.white60 : Colors.black54,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  CupertinoButton(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    color: isDark ? Colors.white : Colors.black,
+                    borderRadius: BorderRadius.circular(10),
+                    minimumSize: const Size(0, 30),
+                    onPressed: () async {
+                      HapticFeedback.lightImpact();
+                      await OneSignalService.instance.promptNotificationPermission();
+                      if (mounted) setState(() {});
+                    },
+                    child: Text(
+                      'Aktifkan',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.black : Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+          // Horizontal Segment Filter Tabs (Semua, Pengumuman, Komen Anime, Chat Umum)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
-            child: Row(
-              children: [
-                _buildFilterTab(
-                  label: 'Semua',
-                  count: totalUnread,
-                  isSelected: _selectedFilter == 0,
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    setState(() => _selectedFilter = 0);
-                  },
-                  isDark: isDark,
-                ),
-                const SizedBox(width: 8),
-                _buildFilterTab(
-                  label: 'Komen Anime',
-                  count: commentUnread,
-                  isSelected: _selectedFilter == 1,
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    setState(() => _selectedFilter = 1);
-                  },
-                  isDark: isDark,
-                ),
-                const SizedBox(width: 8),
-                _buildFilterTab(
-                  label: 'Chat Umum',
-                  count: chatUnread,
-                  isSelected: _selectedFilter == 2,
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    setState(() => _selectedFilter = 2);
-                  },
-                  isDark: isDark,
-                ),
-              ],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              child: Row(
+                children: [
+                  _buildFilterTab(
+                    label: 'Semua',
+                    count: totalUnread,
+                    isSelected: _selectedFilter == 0,
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _selectedFilter = 0);
+                    },
+                    isDark: isDark,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildFilterTab(
+                    label: 'Pengumuman',
+                    count: announcementUnread,
+                    isSelected: _selectedFilter == 1,
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _selectedFilter = 1);
+                    },
+                    isDark: isDark,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildFilterTab(
+                    label: 'Komen Anime',
+                    count: commentUnread,
+                    isSelected: _selectedFilter == 2,
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _selectedFilter = 2);
+                    },
+                    isDark: isDark,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildFilterTab(
+                    label: 'Chat Umum',
+                    count: chatUnread,
+                    isSelected: _selectedFilter == 3,
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _selectedFilter = 3);
+                    },
+                    isDark: isDark,
+                  ),
+                ],
+              ),
             ),
           ),
 
@@ -922,6 +1046,10 @@ class _UniversalNotificationModalState extends State<UniversalNotificationModal>
     String categoryLabel;
 
     switch (item.type) {
+      case UnifiedNotifType.announcement:
+        badgeIcon = CupertinoIcons.speaker_2_fill;
+        categoryLabel = item.subtitle ?? 'Pengumuman';
+        break;
       case UnifiedNotifType.commentLike:
         badgeIcon = CupertinoIcons.heart_fill;
         categoryLabel = 'Komen Anime';
@@ -963,7 +1091,28 @@ class _UniversalNotificationModalState extends State<UniversalNotificationModal>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Actor Avatar with Decorated Frame & Mini Corner Badge
-              GestureDetector(
+              if (item.type == UnifiedNotifType.announcement)
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE5E5EA),
+                    border: Border.all(
+                      color: isDark ? Colors.white24 : Colors.black12,
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      CupertinoIcons.speaker_2_fill,
+                      size: 18,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                )
+              else
+                GestureDetector(
                 onTap: () {
                   if (item.actorUsername != null &&
                       item.actorUsername!.isNotEmpty &&

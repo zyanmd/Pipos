@@ -530,10 +530,17 @@ class GenreModel {
     final clean = GenreUtils.sanitizeGenre(rawName) ?? rawName;
     final slug = (j['param'] ?? j['genre_id'] ?? j['slug'] ?? j['id'] ?? clean).toString().toLowerCase().replaceAll(RegExp(r'^[.,;:!?\-–—\s]+|[.,;:!?\-–—\s]+$'), '');
     final name = rawName.isNotEmpty ? rawName.replaceAll(RegExp(r'^[.,;:!?\-–—\s]+|[.,;:!?\-–—\s]+$'), '').trim() : clean;
+    final rawCount = j['count']?.toString().trim();
+    final parsedCount = int.tryParse(rawCount ?? '');
+    final count = (parsedCount != null && parsedCount > 0)
+        ? '$parsedCount'
+        : (rawCount != null && rawCount.isNotEmpty && rawCount != '0'
+            ? rawCount
+            : null);
     return GenreModel(
       slug: slug.isNotEmpty ? slug : clean,
       name: name.isNotEmpty ? name : clean,
-      count: j['count']?.toString(),
+      count: count,
     );
   }
 }

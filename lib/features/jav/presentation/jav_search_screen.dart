@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/adult_content_service.dart';
 import '../../../shared/widgets/bouncy_tap.dart';
+import '../../../shared/widgets/ios_capsule_search_bar.dart';
 import '../data/models/jav_model.dart';
 import '../data/jav_repository.dart';
 import 'jav_player_screen.dart';
@@ -196,67 +197,68 @@ class _JavSearchScreenState extends State<JavSearchScreen> {
 
     return Scaffold(
       backgroundColor: bg,
-      appBar: AppBar(
-        backgroundColor: bg,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-        leading: CupertinoButton(
-          padding: EdgeInsets.zero,
-          onPressed: () => Navigator.of(context).pop(),
-          child: Icon(CupertinoIcons.back, color: textPrimary),
-        ),
-        title: CupertinoSearchTextField(
-          controller: _searchController,
-          placeholder: 'Cari video JAV, aktris, kode film...',
-          style: TextStyle(color: textPrimary, fontSize: 14),
-          placeholderStyle: TextStyle(color: textMuted, fontSize: 14),
-          prefixIcon: Icon(CupertinoIcons.search, color: textMuted, size: 18),
-          suffixIcon: Icon(CupertinoIcons.xmark_circle_fill, color: textMuted, size: 18),
-          onSubmitted: (q) => _performSearch(q, page: 1),
-          autofocus: widget.initialQuery == null || widget.initialQuery!.isEmpty,
-        ),
-      ),
-      body: Column(
-        children: [
-          // Filter sort chips
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: _sortOptions.entries.map((e) {
-                final isSelected = _selectedSort == e.key;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: BouncyTap(
-                    onTap: () => _onSortChanged(e.key),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? const Color(0xFFFF2D55)
-                            : (isDark ? const Color(0xFF1C1C24) : Colors.black.withValues(alpha: 0.06)),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Text(
-                        e.value,
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : textMuted,
-                          fontSize: 12,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Modern Capsule Search Bar Header
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+              color: bg,
+              child: IosCapsuleSearchBar(
+                controller: _searchController,
+                hintText: 'Cari video JAV, aktris, kode film...',
+                autoFocus: widget.initialQuery == null || widget.initialQuery!.isEmpty,
+                onSubmitted: (q) => _performSearch(q, page: 1),
+                onChanged: (_) => setState(() {}),
+                onClear: () {
+                  _searchController.clear();
+                  setState(() {
+                    _results.clear();
+                    _hasSearched = false;
+                  });
+                },
+              ),
+            ),
+            // Filter sort chips
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: _sortOptions.entries.map((e) {
+                  final isSelected = _selectedSort == e.key;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: BouncyTap(
+                      onTap: () => _onSortChanged(e.key),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? const Color(0xFFFF2D55)
+                              : (isDark ? const Color(0xFF1C1C24) : Colors.black.withValues(alpha: 0.06)),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Text(
+                          e.value,
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : textMuted,
+                            fontSize: 12,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              }).toList(),
+                  );
+                }).toList(),
+              ),
             ),
-          ),
 
-          // Main Search Content
-          Expanded(
-            child: _buildContent(isDark, cardBg, textPrimary, textMuted),
-          ),
-        ],
+            // Main Search Content
+            Expanded(
+              child: _buildContent(isDark, cardBg, textPrimary, textMuted),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -316,39 +318,187 @@ class _JavSearchScreenState extends State<JavSearchScreen> {
     }
 
     if (!_hasSearched) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(CupertinoIcons.search, size: 54, color: textMuted.withValues(alpha: 0.4)),
-            const SizedBox(height: 12),
-            Text(
-              'Cari film JAV berdasarkan judul, kode, atau aktris',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: textMuted, fontSize: 13),
+      final suggestions = [
+        {'title': 'Trending', 'icon': '🔥', 'query': 'trending'},
+        {'title': 'Uncensored', 'icon': '💎', 'query': 'uncensored'},
+        {'title': 'Sub Indo', 'icon': '🇮🇩', 'query': 'sub indo'},
+        {'title': 'Top Aktris', 'icon': '👑', 'query': 'actress'},
+        {'title': 'HD 1080p', 'icon': '✨', 'query': '1080p'},
+        {'title': 'Terbaru', 'icon': '🕒', 'query': 'latest'},
+      ];
+
+      return ListView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF2D55).withValues(alpha: 0.14),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  CupertinoIcons.flame_fill,
+                  size: 13,
+                  color: Color(0xFFFF2D55),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Kategori Populer',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 10,
+            children: suggestions.map((s) {
+              return Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    _searchController.text = s['query']!;
+                    _performSearch(s['query']!, page: 1);
+                  },
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF2D55).withValues(alpha: isDark ? 0.12 : 0.08),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: const Color(0xFFFF2D55).withValues(alpha: isDark ? 0.28 : 0.20),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(s['icon']!, style: const TextStyle(fontSize: 13)),
+                        const SizedBox(width: 6),
+                        Text(
+                          s['title']!,
+                          style: TextStyle(
+                            color: isDark ? Colors.white : Colors.black87,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 26),
+          // Discovery Card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF14141E) : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isDark ? const Color(0xFFFF2D55).withValues(alpha: 0.18) : Colors.black.withValues(alpha: 0.08),
+                width: 1,
+              ),
             ),
-          ],
-        ),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFF2D55), Color(0xFFE11D48)],
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    CupertinoIcons.sparkles,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Pencarian Video JAV',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13.5,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Ketik kode video, nama aktris, atau judul untuk mencari katalog lengkap.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.white54 : Colors.black54,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       );
     }
 
     if (_results.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(CupertinoIcons.film, size: 54, color: textMuted.withValues(alpha: 0.4)),
-            const SizedBox(height: 12),
-            Text(
-              'Tidak ada video JAV yang ditemukan.',
-              style: TextStyle(color: textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Coba kata kunci lain atau periksa ejaan.',
-              style: TextStyle(color: textMuted, fontSize: 12),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF2D55).withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  CupertinoIcons.film,
+                  size: 28,
+                  color: Color(0xFFFF2D55),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Tidak Ada Video Ditemukan',
+                style: TextStyle(
+                  color: textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Coba gunakan kata kunci kode film atau nama aktris lainnya.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: textMuted, fontSize: 12.5),
+              ),
+            ],
+          ),
         ),
       );
     }

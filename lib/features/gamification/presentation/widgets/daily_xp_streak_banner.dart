@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../../shared/providers/auth_provider.dart';
+import '../../../../shared/widgets/glass_container.dart';
 import '../../../auth/presentation/login_screen.dart';
 import '../../data/gamification_repository.dart';
 import '../../data/models/leaderboard_user_model.dart';
@@ -61,6 +62,9 @@ class _DailyXpStreakBannerState extends State<DailyXpStreakBanner>
       setState(() {
         _summary = summary;
       });
+      if (summary != null && auth.user != null && summary.xp != auth.user!.xp) {
+        auth.refreshUser();
+      }
     }
   }
 
@@ -205,38 +209,22 @@ class _DailyXpStreakBannerState extends State<DailyXpStreakBanner>
     final nextBonus = rewards[(cycleDay - 1).clamp(0, rewards.length - 1)];
     final isGrandDay = cycleDay == 7;
 
-    return Container(
+    return GlassContainer(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: isDark
-            ? const Color(0xFF1C1C1E).withValues(alpha: 0.85)
-            : Colors.white.withValues(alpha: 0.95),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isGrandDay && canClaim
-              ? const Color(0xFFFF9500).withValues(alpha: 0.5)
-              : isDark
-                  ? Colors.white.withValues(alpha: 0.10)
-                  : Colors.black.withValues(alpha: 0.06),
-          width: isGrandDay && canClaim ? 1.5 : 1.0,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isGrandDay && canClaim
-                ? const Color(0xFFFF9500).withValues(alpha: 0.15)
-                : Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
+      borderRadius: BorderRadius.circular(20),
+      padding: const EdgeInsets.all(14),
+      blur: 10,
+      border: Border.all(
+        color: isGrandDay && canClaim
+            ? const Color(0xFFFF9500).withValues(alpha: 0.6)
+            : (isDark
+                ? Colors.white.withValues(alpha: 0.15)
+                : Colors.black.withValues(alpha: 0.08)),
+        width: isGrandDay && canClaim ? 1.5 : 0.8,
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
               // ── Header: Streak & Level / Papan Peringkat ──
               Row(
                 children: [
@@ -335,7 +323,7 @@ class _DailyXpStreakBannerState extends State<DailyXpStreakBanner>
                         children: [
                           Text(
                             isLoggedIn
-                                ? 'Lv. ${user?.level ?? 1} • ${(user?.xp ?? 0)} XP'
+                                ? 'Lv. ${_summary?.level ?? user?.level ?? 1} • ${(_summary?.xp ?? user?.xp ?? 0)} XP'
                                 : 'Peringkat',
                             style: const TextStyle(
                               fontSize: 11,
@@ -544,8 +532,6 @@ class _DailyXpStreakBannerState extends State<DailyXpStreakBanner>
                 ),
             ],
           ),
-        ),
-      ),
     );
   }
 

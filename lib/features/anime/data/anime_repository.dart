@@ -201,11 +201,24 @@ class AnimeRepository {
   }
 
   Future<List<AnimeModel>> byGenre(String slug, {int page = 1}) async {
-    final resp = await ApiClient.instance.get(
-      ApiEndpoints.animeByGenre(slug),
-      queryParameters: {'page': page},
-    );
-    return _asList(resp.data).map((e) => AnimeModel.fromJson(e)).toList();
+    try {
+      final resp = await ApiClient.instance.get(
+        ApiEndpoints.animeByGenre(slug),
+        queryParameters: {'page': page},
+      );
+      final list = _asList(resp.data).map((e) => AnimeModel.fromJson(e)).toList();
+      if (list.isNotEmpty) return list;
+    } catch (_) {}
+
+    // Fallback: Jika endpoint genre scraper mengembalikan list kosong (seperti slice-of-life)
+    if (page == 1) {
+      try {
+        final cleanQuery = slug.replaceAll('-', ' ').replaceAll('_', ' ').trim();
+        final searchResults = await search(cleanQuery);
+        if (searchResults.isNotEmpty) return searchResults;
+      } catch (_) {}
+    }
+    return [];
   }
 
   final Map<String, AnimeDetailModel> _detailCache = {};
@@ -942,7 +955,7 @@ class AnimeRepository {
     try {
       String filename = file.path.split(Platform.pathSeparator).last;
       final ext = filename.contains('.') ? filename.split('.').last.toLowerCase() : '';
-      if (!['png', 'jpg', 'jpeg', 'gif', 'webp'].contains(ext)) {
+      if (!['png', 'jpg', 'jpeg', 'gif', 'webp', 'mp4', 'mov', 'webm', 'mkv'].contains(ext)) {
         filename = 'comment_${DateTime.now().millisecondsSinceEpoch}.jpg';
       }
       final form = FormData.fromMap({

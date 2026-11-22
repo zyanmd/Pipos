@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/comic_read_progress_service.dart';
+import '../../../core/services/mal_service.dart';
 import '../../../core/services/pip_service.dart';
 import '../../../features/comic/data/comic_repository.dart';
 import '../../../features/comic/data/models/comic_model.dart';
@@ -777,18 +778,33 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
 
   Future<void> _recordHistory() async {
     final auth = context.read<AuthProvider>();
-    if (!auth.isAuthenticated) return;
-    try {
-      await _repo.addToHistory(
-        comicSlug: ComicModel.extractCleanSlug(widget.comicSlug),
-        chapterId: ChapterModel.extractCleanSlug(widget.chapterId),
-        title: widget.comicTitle,
-        chapterLabel: widget.chapterLabel,
-        thumb: widget.comicThumb,
-        lastPage: _current + 1,
-        totalPages: _chapter?.images.length,
+    if (auth.isAuthenticated) {
+      try {
+        await _repo.addToHistory(
+          comicSlug: ComicModel.extractCleanSlug(widget.comicSlug),
+          chapterId: ChapterModel.extractCleanSlug(widget.chapterId),
+          title: widget.comicTitle,
+          chapterLabel: widget.chapterLabel,
+          thumb: widget.comicThumb,
+          lastPage: _current + 1,
+          totalPages: _chapter?.images.length,
+        );
+      } catch (_) {}
+    }
+
+    // MAL Auto-Scrobble: Lacak chapter komik/manga di MyAnimeList
+    if (MalService.instance.isConnected && MalService.instance.isAutoScrobbleEnabled) {
+      final chapNum = _extractChapterNumber(widget.chapterLabel)?.toInt() ??
+          _extractChapterNumber(widget.chapterId)?.toInt() ??
+          1;
+      unawaited(
+        MalService.instance.scrobbleChapter(
+          comicTitle: widget.comicTitle,
+          comicSlug: widget.comicSlug,
+          chapterNumber: chapNum,
+        ),
       );
-    } catch (_) {}
+    }
   }
 
   int get _currentIndex {
@@ -1221,7 +1237,7 @@ class _ComicReaderScreenState extends State<ComicReaderScreen>
                       subId: widget.chapterId,
                       subTitle: widget.chapterLabel,
                     );
-                    if (res != null && context.mounted) {
+                    if (res != null && mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Ulasan berhasil disimpan!'),

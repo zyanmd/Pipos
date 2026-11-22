@@ -54,6 +54,10 @@ class AppNetworkImage extends StatelessWidget {
     if (raw.contains('thumbnail.komiku.to')) {
       raw = raw.replaceAll('thumbnail.komiku.to', 'thumbnail.komiku.org');
     }
+    // Hapus parameter kompresi rendah agar seluruh gambar komik/poster HD
+    if (raw.contains('thumbnail.komiku.org') || raw.contains('komiku')) {
+      raw = raw.replaceAll(RegExp(r'[?&]resize=\d+,\d+'), '');
+    }
     final String u;
     if (raw.startsWith('http')) {
       u = raw;

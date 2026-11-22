@@ -134,6 +134,40 @@ class ComicReadProgressService {
     }
   }
 
+  /// Helper to extract numeric chapter number (e.g. 12 from "Chapter 12", "Ch. 12", "ch-12", "12")
+  static int? extractChapterNumber(String? text) {
+    if (text == null || text.trim().isEmpty) return null;
+    final chMatch = RegExp(r'(?:Chapter|Ch|Bab)\.?\s*(\d+)', caseSensitive: false).firstMatch(text);
+    if (chMatch != null) return int.tryParse(chMatch.group(1)!);
+    final hyphenMatch = RegExp(r'(?:chapter|ch|bab)[-_](\d+)', caseSensitive: false).firstMatch(text);
+    if (hyphenMatch != null) return int.tryParse(hyphenMatch.group(1)!);
+    final numOnly = RegExp(r'^(\d+)$').firstMatch(text.trim());
+    if (numOnly != null) return int.tryParse(numOnly.group(1)!);
+    final anyDigit = RegExp(r'(\d+)').firstMatch(text);
+    if (anyDigit != null) return int.tryParse(anyDigit.group(1)!);
+    return null;
+  }
+
+  /// Get all comics with reading history
+  Future<List<ComicReadProgress>> getAllReadComics() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final keys = prefs.getKeys().where((k) => k.startsWith(_kPrefixComic)).toList();
+      final list = <ComicReadProgress>[];
+      for (final key in keys) {
+        final raw = prefs.getString(key);
+        if (raw == null || raw.isEmpty) continue;
+        try {
+          list.add(ComicReadProgress.fromJson(jsonDecode(raw) as Map<String, dynamic>));
+        } catch (_) {}
+      }
+      list.sort((a, b) => b.updatedAtMillis.compareTo(a.updatedAtMillis));
+      return list;
+    } catch (_) {
+      return [];
+    }
+  }
+
   /// Clear progress for a chapter if needed
   Future<void> clearProgress({
     required String comicSlug,

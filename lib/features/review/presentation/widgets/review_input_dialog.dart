@@ -816,7 +816,18 @@ class _ReviewInputDialogState extends State<ReviewInputDialog> {
                           isDark,
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: _buildStatusCard(
+                          'watching',
+                          'Belum Selesai',
+                          widget.itemType == 'anime'
+                              ? CupertinoIcons.play_circle_fill
+                              : CupertinoIcons.book_fill,
+                          isDark,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
                       Expanded(
                         child: _buildStatusCard(
                           'planned',
@@ -825,7 +836,7 @@ class _ReviewInputDialogState extends State<ReviewInputDialog> {
                           isDark,
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                       Expanded(
                         child: _buildStatusCard(
                           'replaying',

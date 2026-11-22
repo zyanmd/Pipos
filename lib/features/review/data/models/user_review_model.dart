@@ -231,12 +231,16 @@ class UserReviewModel {
 
   String get statusDisplay {
     switch (status.toLowerCase()) {
+      case 'watching':
+      case 'uncompleted':
+      case 'ongoing':
+        return itemType == 'anime' ? 'Belum Selesai (Nonton)' : 'Belum Selesai (Baca)';
       case 'planned':
-        return itemType == 'anime' ? 'Mau Nonton Ulang' : 'Mau Baca Ulang';
+        return itemType == 'anime' ? 'Mau Nonton' : 'Mau Baca';
       case 'replaying':
         return itemType == 'anime' ? 'Sedang Diulang' : 'Sedang Dibaca Ulang';
       default:
-        return 'Selesai Diulas';
+        return 'Selesai';
     }
   }
 

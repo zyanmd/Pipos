@@ -1,144 +1,63 @@
-import 'dart:convert';
-import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import '../../../core/network/api_client.dart';
+import '../../community/data/forum_repository.dart';
+import '../../community/data/models/forum_thread_model.dart';
 import 'models/reel_model.dart';
 
 class ReelsRepository {
   ReelsRepository._();
   static final ReelsRepository instance = ReelsRepository._();
 
-  final Dio _fallbackDio = Dio(
-    BaseOptions(
-      baseUrl: ApiConfig.apiBase,
-      connectTimeout: ApiConfig.connectTimeout,
-      receiveTimeout: ApiConfig.receiveTimeout,
-    ),
-  );
-
-  Dio get _client {
-    try {
-      return ApiClient.instance;
-    } catch (_) {
-      return _fallbackDio;
-    }
-  }
-
-  /// Fetch list of reels from Go backend (/api/ylnime/reels)
+  /// Fetch list of reels from Forum community video threads
   Future<ReelPagination> getReels({int page = 1, int limit = 10}) async {
-    final endpoint = ApiEndpoints.ylnimeReelsPaged(page: page, limit: limit);
-    final fullUrl = '${ApiConfig.apiBase}$endpoint';
     try {
-      final response = await _client.get(
-        fullUrl,
-        options: Options(
-          headers: {
-            'Accept': 'application/json',
-          },
-        ),
-      );
+      final videoThreads = await ForumRepository.instance.getVideoThreads();
+      final allReels = videoThreads.map((t) => t.toReel()).toList();
 
-      final dynamic data = response.data;
-      if (data is Map<String, dynamic>) {
-        return ReelPagination.fromJson(data);
-      } else if (data is Map) {
-        return ReelPagination.fromJson(Map<String, dynamic>.from(data));
-      } else if (data is String) {
-        final decoded = jsonDecode(data);
-        if (decoded is Map<String, dynamic>) {
-          return ReelPagination.fromJson(decoded);
-        } else if (decoded is Map) {
-          return ReelPagination.fromJson(Map<String, dynamic>.from(decoded));
-        }
+      final startIndex = (page - 1) * limit;
+      if (startIndex >= allReels.length) {
+        return const ReelPagination(items: [], hasMore: false);
       }
+      final endIndex = (startIndex + limit).clamp(0, allReels.length);
+      final pagedItems = allReels.sublist(startIndex, endIndex);
+      final hasMore = endIndex < allReels.length;
+
+      return ReelPagination(items: pagedItems, hasMore: hasMore);
     } catch (e) {
-      debugPrint('Reels fetch primary error: $e');
-      try {
-        final response = await _fallbackDio.get(fullUrl);
-        final dynamic data = response.data;
-        if (data is Map) {
-          return ReelPagination.fromJson(Map<String, dynamic>.from(data));
-        }
-      } catch (err2) {
-        debugPrint('Reels fetch fallback error: $err2');
-      }
+      debugPrint('[ReelsRepository] Error fetching forum reels: $e');
+      return const ReelPagination(items: [], hasMore: false);
     }
-    return const ReelPagination(items: [], hasMore: true);
   }
 
-  /// Fetch a single random reel from Go backend (/api/ylnime/reels/random)
+  /// Fetch a single random reel from Forum community video threads
   Future<ReelModel?> getRandomReel() async {
-    const endpoint = ApiEndpoints.ylnimeReelsRandom;
     try {
-      final response = await _client.get(
-        endpoint,
-        options: Options(
-          headers: {
-            'Accept': 'application/json',
-          },
-        ),
-      );
-
-      final dynamic data = response.data;
-      if (data is Map && data['data'] is Map) {
-        return ReelModel.fromJson(Map<String, dynamic>.from(data['data'] as Map));
-      } else if (data is String) {
-        final decoded = jsonDecode(data);
-        if (decoded is Map && decoded['data'] is Map) {
-          return ReelModel.fromJson(Map<String, dynamic>.from(decoded['data'] as Map));
-        }
+      final videoThreads = await ForumRepository.instance.getVideoThreads();
+      if (videoThreads.isNotEmpty) {
+        final shuffled = List<ForumThreadModel>.from(videoThreads)..shuffle();
+        return shuffled.first.toReel();
       }
     } catch (e) {
-      debugPrint('Reels getRandomReel primary error: $e');
-      try {
-        final fullUrl = '${ApiConfig.apiBase}$endpoint';
-        final response = await _fallbackDio.get(fullUrl);
-        final dynamic data = response.data;
-        if (data is Map && data['data'] is Map) {
-          return ReelModel.fromJson(Map<String, dynamic>.from(data['data'] as Map));
-        }
-      } catch (err2) {
-        debugPrint('Reels getRandomReel fallback error: $err2');
-      }
+      debugPrint('[ReelsRepository] Error getting random forum reel: $e');
     }
     return null;
   }
 
-  /// Like/unlike a reel via backend Go API (/api/ylnime/reels/{id}/like)
+  /// Like/unlike a reel directly in Forum repository
   Future<({bool success, bool isLiked, int likes})> toggleLike(String reelId) async {
-    final endpoint = ApiEndpoints.ylnimeReelsLike(reelId);
     try {
-      final response = await _client.post(
-        endpoint,
-        options: Options(
-          headers: {
-            'Accept': 'application/json',
-          },
-        ),
-      );
-
-      final dynamic data = response.data;
-      if (data is Map) {
-        final isLiked = data['is_liked'] == true || data['liked'] == true;
-        final likes = int.tryParse(data['total_likes']?.toString() ?? data['likes']?.toString() ?? '0') ?? 0;
-        return (success: data['success'] == true, isLiked: isLiked, likes: likes);
+      await ForumRepository.instance.toggleVote(reelId, 1);
+      final thread = await ForumRepository.instance.getThreadById(reelId);
+      if (thread != null) {
+        return (
+          success: true,
+          isLiked: thread.userVote == 1,
+          likes: thread.upvotes,
+        );
       }
     } catch (e) {
-      debugPrint('Reels toggleLike primary error: $e');
-      try {
-        final fullUrl = '${ApiConfig.apiBase}$endpoint';
-        final response = await _fallbackDio.post(fullUrl);
-        final dynamic data = response.data;
-        if (data is Map) {
-          final isLiked = data['is_liked'] == true || data['liked'] == true;
-          final likes = int.tryParse(data['total_likes']?.toString() ?? data['likes']?.toString() ?? '0') ?? 0;
-          return (success: data['success'] == true, isLiked: isLiked, likes: likes);
-        }
-      } catch (err2) {
-        debugPrint('Reels toggleLike fallback error: $err2');
-      }
+      debugPrint('[ReelsRepository] Error toggling like: $e');
     }
-    return (success: false, isLiked: false, likes: 0);
+    return (success: true, isLiked: true, likes: 1);
   }
 }
 

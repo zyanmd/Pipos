@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../shared/widgets/ios_capsule_search_bar.dart';
 import '../../../shared/widgets/glass_container.dart';
 import '../../../shared/widgets/app_network_image.dart';
 import '../data/models/novel_model.dart';
@@ -121,7 +122,6 @@ class _NovelSearchScreenState extends State<NovelSearchScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final hasActiveFilter = _searchController.text.isNotEmpty || _selectedGenre != null;
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBackground : AppColors.lightBackground,
@@ -136,157 +136,33 @@ class _NovelSearchScreenState extends State<NovelSearchScreen> {
               ),
               child: Column(
                 children: [
-                  // ── Apple Header & Spotlight Search Box ──
+                  // Modern Capsule Search Bar Header
                   Container(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.darkBackground : Colors.white,
-                      border: Border(
-                        bottom: BorderSide(
-                          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-                          width: 0.5,
-                        ),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            GestureDetector(
-                              onTap: () {
-                                HapticFeedback.lightImpact();
-                                Navigator.maybePop(context);
-                              },
-                              child: Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color: isDark ? AppColors.darkCard : const Color(0xFFE5E5EA),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: isDark ? AppColors.darkBorder : Colors.transparent,
-                                    width: 0.5,
-                                  ),
-                                ),
-                                child: Icon(
-                                  CupertinoIcons.chevron_back,
-                                  size: 18,
-                                  color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Text(
-                                'Cari Web Novel',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: -0.4,
-                                  color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                                ),
-                              ),
-                            ),
-                            if (hasActiveFilter) ...[
-                              const SizedBox(width: 8),
-                              GestureDetector(
-                                onTap: () {
-                                  HapticFeedback.selectionClick();
-                                  _searchController.clear();
-                                  setState(() {
-                                    _selectedGenre = null;
-                                    _results.clear();
-                                    _error = null;
-                                  });
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                  decoration: BoxDecoration(
-                                    color: (isDark ? Colors.white : Colors.black).withValues(alpha: isDark ? 0.18 : 0.10),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    'Reset',
-                                    style: TextStyle(
-                                      color: isDark ? Colors.white : Colors.black,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Apple Spotlight Search Bar
-                        Container(
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: isDark ? AppColors.darkCard : const Color(0xFFE5E5EA),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isDark ? AppColors.darkBorder : Colors.transparent,
-                              width: 0.5,
-                            ),
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Row(
-                            children: [
-                              Icon(
-                                CupertinoIcons.search,
-                                size: 18,
-                                color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: TextField(
-                                  controller: _searchController,
-                                  autofocus: widget.initialGenre == null,
-                                  onChanged: _onSearchChanged,
-                                  style: TextStyle(
-                                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                                    fontSize: 14,
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: 'Cari judul web novel...',
-                                    hintStyle: TextStyle(
-                                      color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                                      fontSize: 14,
-                                    ),
-                                    border: InputBorder.none,
-                                    isDense: true,
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-                                ),
-                              ),
-                              if (_searchController.text.isNotEmpty)
-                                GestureDetector(
-                                  onTap: () {
-                                    HapticFeedback.selectionClick();
-                                    _searchController.clear();
-                                    _onSearchChanged('');
-                                  },
-                                  child: Icon(
-                                    CupertinoIcons.clear_circled_solid,
-                                    size: 18,
-                                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+                    color: isDark ? AppColors.darkBackground : AppColors.lightBackground,
+                    child: IosCapsuleSearchBar(
+                      controller: _searchController,
+                      hintText: 'Cari judul web novel...',
+                      autoFocus: widget.initialGenre == null,
+                      onChanged: _onSearchChanged,
+                      onSubmitted: (val) => _executeSearch(val),
+                      onClear: () {
+                        _searchController.clear();
+                        _onSearchChanged('');
+                        setState(() {
+                          _selectedGenre = null;
+                          _results.clear();
+                          _error = null;
+                        });
+                      },
                     ),
                   ),
 
                   // ── GENRE FILTER CHIPS ──
                   if (_genres.isNotEmpty) ...[
                     Container(
-                      height: 42,
-                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      height: 44,
+                      margin: const EdgeInsets.symmetric(vertical: 6),
                       child: ListView.separated(
                         physics: const BouncingScrollPhysics(),
                         scrollDirection: Axis.horizontal,
@@ -310,24 +186,24 @@ class _NovelSearchScreenState extends State<NovelSearchScreen> {
                             },
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 180),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? (isDark ? Colors.white : Colors.black)
-                                    : (isDark ? AppColors.darkCard : AppColors.lightCard),
+                                    ? const Color(0xFF10B981)
+                                    : (isDark ? const Color(0xFF161622) : const Color(0xFFF2F2F7)),
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
                                   color: isSelected
-                                      ? (isDark ? Colors.white : Colors.black)
-                                      : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
-                                  width: 0.5,
+                                      ? const Color(0xFF10B981)
+                                      : (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06)),
+                                  width: 1,
                                 ),
                                 boxShadow: isSelected
                                     ? [
                                         BoxShadow(
-                                          color: (isDark ? Colors.white : Colors.black).withValues(alpha: isDark ? 0.15 : 0.25),
-                                          blurRadius: 6,
+                                          color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                                          blurRadius: 8,
                                           offset: const Offset(0, 2),
                                         ),
                                       ]
@@ -337,9 +213,9 @@ class _NovelSearchScreenState extends State<NovelSearchScreen> {
                                 g.name,
                                 style: TextStyle(
                                   color: isSelected
-                                      ? (isDark ? Colors.black : Colors.white)
-                                      : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
-                                  fontSize: 12,
+                                      ? Colors.white
+                                      : (isDark ? Colors.white70 : Colors.black87),
+                                  fontSize: 12.5,
                                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                                 ),
                               ),
@@ -371,30 +247,52 @@ class _NovelSearchScreenState extends State<NovelSearchScreen> {
                               )
                             : _results.isEmpty
                                 ? Center(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          CupertinoIcons.book,
-                                          size: 48,
-                                          color: isDark ? Colors.white24 : Colors.black26,
-                                        ),
-                                        const SizedBox(height: 12),
-                                        Text(
-                                          _searchController.text.isNotEmpty
-                                              ? 'Tidak ada novel yang cocok dengan "${_searchController.text}"'
-                                              : 'Ketik judul atau pilih genre untuk mencari novel',
-                                          style: TextStyle(
-                                            color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                                            fontSize: 13,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(24),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            width: 58,
+                                            height: 58,
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              CupertinoIcons.book_fill,
+                                              size: 28,
+                                              color: Color(0xFF10B981),
+                                            ),
                                           ),
-                                        ),
-                                      ],
+                                          const SizedBox(height: 14),
+                                          Text(
+                                            _searchController.text.isNotEmpty
+                                                ? 'Tidak ada novel yang cocok dengan "${_searchController.text}"'
+                                                : 'Cari Ribuan Web Novel & Light Novel',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              color: isDark ? Colors.white : Colors.black87,
+                                              fontSize: 14.5,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            'Ketik judul di kotak pencarian atau ketuk salah satu genre di atas.',
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              color: isDark ? Colors.white38 : Colors.black45,
+                                              fontSize: 12.5,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   )
                                 : ListView.separated(
                                     physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-                                    padding: const EdgeInsets.all(16),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                     itemCount: _results.length,
                                     separatorBuilder: (_, __) => const SizedBox(height: 12),
                                     itemBuilder: (ctx, idx) {

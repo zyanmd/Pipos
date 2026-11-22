@@ -25,7 +25,14 @@ import 'widgets/review_target_picker_sheet.dart';
 /// Layar utama Tab "Ulas" (Feed Komunitas & Ulasan Pribadi)
 /// Mengikuti Apple iOS HIG monochrome design language Animeverse.
 class ReviewHomeScreen extends StatefulWidget {
-  const ReviewHomeScreen({super.key});
+  final bool isEmbedded;
+  final Widget? headerTitleWidget;
+
+  const ReviewHomeScreen({
+    super.key,
+    this.isEmbedded = false,
+    this.headerTitleWidget,
+  });
 
   @override
   State<ReviewHomeScreen> createState() => _ReviewHomeScreenState();
@@ -448,26 +455,26 @@ class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Tooltip(
         message: tooltip,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
+        child: BouncyTap(
+          scaleDown: 0.88,
           onTap: onTap,
-          child: Container(
+          child: GlassContainer(
             width: 36,
             height: 36,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
+            borderRadius: BorderRadius.circular(18),
+            blur: 10,
+            border: Border.all(
               color: isDark
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : Colors.black.withValues(alpha: 0.05),
-              border: Border.all(
-                color: isDark ? AppColors.iosHairlineDark : AppColors.iosHairlineLight,
-                width: 0.5,
-              ),
+                  ? Colors.white.withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: 0.08),
+              width: 0.8,
             ),
-            child: Icon(
-              icon,
-              size: 17,
-              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+            child: Center(
+              child: Icon(
+                icon,
+                size: 17,
+                color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+              ),
             ),
           ),
         ),
@@ -494,48 +501,34 @@ class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
       ),
     ];
 
-    final containerBg = isDark
-        ? const Color(0xFF141416)
-        : const Color(0xFFEBEBF0);
-    final borderColor = isDark
-        ? Colors.white.withValues(alpha: 0.08)
-        : Colors.black.withValues(alpha: 0.06);
-
-    return Container(
+    return GlassContainer(
       height: 44,
+      borderRadius: BorderRadius.circular(22),
       padding: const EdgeInsets.all(3.5),
-      decoration: BoxDecoration(
-        color: containerBg,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: borderColor, width: 0.8),
+      blur: 10,
+      border: Border.all(
+        color: isDark ? Colors.white.withValues(alpha: 0.12) : Colors.black.withValues(alpha: 0.06),
+        width: 0.8,
       ),
       child: Row(
         children: scopes.map((item) {
           final isSelected = _selectedScope == item.key;
           return Expanded(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
+            child: BouncyTap(
+              scaleDown: 0.95,
               onTap: () => _onScopeChanged(item.key),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 220),
                 curve: Curves.easeOutCubic,
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? (isDark ? const Color(0xFF28282C) : Colors.white)
+                      ? (isDark ? Colors.white : Colors.black)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(19),
-                  border: isSelected
-                      ? Border.all(
-                          color: isDark
-                              ? Colors.white.withValues(alpha: 0.12)
-                              : Colors.black.withValues(alpha: 0.05),
-                          width: 0.6,
-                        )
-                      : null,
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: isDark ? 0.40 : 0.08),
+                            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.08),
                             blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
@@ -551,7 +544,7 @@ class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
                         item.icon,
                         size: 14.5,
                         color: isSelected
-                            ? (isDark ? Colors.white : Colors.black)
+                            ? (isDark ? Colors.black : Colors.white)
                             : (isDark ? Colors.white54 : Colors.black45),
                       ),
                       const SizedBox(width: 5.5),
@@ -562,7 +555,7 @@ class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
                           fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                           letterSpacing: -0.2,
                           color: isSelected
-                              ? (isDark ? Colors.white : Colors.black)
+                              ? (isDark ? Colors.black : Colors.white)
                               : (isDark ? Colors.white60 : Colors.black54),
                         ),
                       ),
@@ -579,36 +572,35 @@ class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
 
   Widget _buildFilterChip(String type, String label, bool isDark) {
     final isSelected = _selectedType == type;
-    final activeBg = isDark ? Colors.white : Colors.black;
-    final activeFg = isDark ? Colors.black : Colors.white;
-    final inactiveBg = isDark
-        ? Colors.white.withValues(alpha: 0.06)
-        : Colors.black.withValues(alpha: 0.04);
-    final inactiveFg = isDark ? Colors.white60 : Colors.black54;
 
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return BouncyTap(
+      scaleDown: 0.94,
       onTap: () => _onFilterChanged(type),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: isSelected ? activeBg : inactiveBg,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected
-                ? Colors.transparent
-                : (isDark ? Colors.white10 : Colors.black12),
-            width: 0.6,
-          ),
+      child: GlassContainer(
+        borderRadius: BorderRadius.circular(16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6.5),
+        color: isSelected
+            ? (isDark ? Colors.white : Colors.black)
+            : (isDark
+                ? Colors.white.withValues(alpha: 0.06)
+                : Colors.black.withValues(alpha: 0.04)),
+        border: Border.all(
+          color: isSelected
+              ? (isDark ? Colors.white : Colors.black)
+              : (isDark
+                  ? Colors.white.withValues(alpha: 0.10)
+                  : Colors.black.withValues(alpha: 0.06)),
+          width: 0.6,
         ),
+        blur: 10,
         child: Text(
           label,
           style: TextStyle(
             fontSize: 12,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            color: isSelected ? activeFg : inactiveFg,
+            color: isSelected
+                ? (isDark ? Colors.black : Colors.white)
+                : (isDark ? Colors.white70 : Colors.black87),
             letterSpacing: -0.1,
           ),
         ),
@@ -617,28 +609,20 @@ class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
   }
 
   Widget _buildSortButton(bool isDark) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return BouncyTap(
+      scaleDown: 0.94,
       onTap: _showSortSheet,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-        decoration: BoxDecoration(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.06)
-              : Colors.black.withValues(alpha: 0.04),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isDark ? Colors.white10 : Colors.black12,
-            width: 0.6,
-          ),
-        ),
+      child: GlassContainer(
+        borderRadius: BorderRadius.circular(16),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6.5),
+        blur: 10,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               CupertinoIcons.arrow_up_arrow_down,
               size: 11.5,
-              color: isDark ? Colors.white60 : Colors.black54,
+              color: isDark ? Colors.white70 : Colors.black54,
             ),
             const SizedBox(width: 4.5),
             Text(
@@ -654,7 +638,7 @@ class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
             Icon(
               CupertinoIcons.chevron_down,
               size: 9.5,
-              color: isDark ? Colors.white38 : Colors.black38,
+              color: isDark ? Colors.white54 : Colors.black38,
             ),
           ],
         ),
@@ -687,39 +671,42 @@ class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
                 slivers: [
                   // Apple iOS Large Title App Bar (Matches Anime & Comic Tab)
                   SliverAppBar(
-                    expandedHeight: 112,
+                    expandedHeight: widget.isEmbedded ? (kToolbarHeight + 8) : 112,
                     pinned: true,
-                    stretch: true,
+                    stretch: !widget.isEmbedded,
                     backgroundColor: isDark
                         ? AppColors.iosBackgroundDark.withValues(alpha: 0.85)
                         : AppColors.iosBackgroundLight.withValues(alpha: 0.85),
                     surfaceTintColor: Colors.transparent,
                     automaticallyImplyLeading: false,
-                    flexibleSpace: LayoutBuilder(
-                      builder: (ctx, c) {
-                        final shrink = 1 -
-                            ((c.maxHeight - kToolbarHeight) / (112 - kToolbarHeight))
-                                .clamp(0.0, 1.0);
-                        final isShrunk = shrink > 0.6;
-                        return FlexibleSpaceBar(
-                          centerTitle: isShrunk,
-                          titlePadding: EdgeInsets.only(
-                            left: isShrunk ? 0 : 16,
-                            right: isShrunk ? 0 : 16,
-                            bottom: isShrunk ? 13 : 12,
+                    title: widget.isEmbedded ? widget.headerTitleWidget : null,
+                    flexibleSpace: widget.isEmbedded
+                        ? null
+                        : LayoutBuilder(
+                            builder: (ctx, c) {
+                              final shrink = 1 -
+                                  ((c.maxHeight - kToolbarHeight) / (112 - kToolbarHeight))
+                                      .clamp(0.0, 1.0);
+                              final isShrunk = shrink > 0.6;
+                              return FlexibleSpaceBar(
+                                centerTitle: isShrunk,
+                                titlePadding: EdgeInsets.only(
+                                  left: isShrunk ? 0 : 16,
+                                  right: isShrunk ? 0 : 16,
+                                  bottom: isShrunk ? 13 : 12,
+                                ),
+                                title: Text(
+                                  'Ulas',
+                                  style: TextStyle(
+                                    fontSize: isShrunk ? 17 : 32,
+                                    fontWeight: isShrunk ? FontWeight.w600 : FontWeight.w700,
+                                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                                    letterSpacing: isShrunk ? -0.4 : -1.0,
+                                  ),
+                                ),
+                              );
+                            },
                           ),
-                          title: Text(
-                            'Ulas',
-                            style: TextStyle(
-                              fontSize: isShrunk ? 17 : 32,
-                              fontWeight: isShrunk ? FontWeight.w600 : FontWeight.w700,
-                              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                              letterSpacing: isShrunk ? -0.4 : -1.0,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
                     actions: [
                       _buildIosActionButton(
                         icon: CupertinoIcons.square_pencil,
@@ -810,23 +797,10 @@ class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
               HapticFeedback.lightImpact();
               _openCreateReviewPicker();
             },
-            child: Container(
+            child: GlassContainer(
               padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xF20F0F12) : const Color(0xF8FFFFFF),
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(
-                  color: isDark ? const Color(0xFF262626) : const Color(0xFFDBDBDB),
-                  width: 0.8,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.14),
-                    blurRadius: 18,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
+              borderRadius: BorderRadius.circular(30),
+              blur: 12,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -864,27 +838,17 @@ class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
     final decorUrl = decor?.decorationUrl ?? item.userDecorationUrl;
     final decorCode = decor?.decorationCode ?? item.userDecorationCode;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF18181C) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.06),
-          width: 0.8,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.04),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
-          ),
-        ],
+    return GlassContainer(
+      borderRadius: BorderRadius.circular(18),
+      padding: const EdgeInsets.all(16),
+      blur: 12,
+      border: Border.all(
+        color: isDark ? Colors.white.withValues(alpha: 0.10) : Colors.black.withValues(alpha: 0.06),
+        width: 0.6,
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
             // ── 1. HEADER USER REVIEWER ──
             Row(
               children: [
@@ -942,26 +906,39 @@ class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
                 const SizedBox(width: 8),
 
                 // Status Badge (Apple Squircle Pill)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white.withValues(alpha: 0.08)
-                        : Colors.black.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: isDark ? Colors.white10 : Colors.black12,
-                      width: 0.6,
-                    ),
-                  ),
-                  child: Text(
-                    item.statusDisplay,
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white70 : Colors.black87,
-                    ),
-                  ),
+                Builder(
+                  builder: (_) {
+                    final isWatching = item.status.toLowerCase() == 'watching' ||
+                        item.status.toLowerCase() == 'uncompleted' ||
+                        item.status.toLowerCase() == 'ongoing';
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isWatching
+                            ? const Color(0xFF0A84FF).withValues(alpha: isDark ? 0.22 : 0.12)
+                            : (isDark
+                                ? Colors.white.withValues(alpha: 0.08)
+                                : Colors.black.withValues(alpha: 0.05)),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: isWatching
+                              ? const Color(0xFF0A84FF).withValues(alpha: 0.40)
+                              : (isDark ? Colors.white10 : Colors.black12),
+                          width: 0.6,
+                        ),
+                      ),
+                      child: Text(
+                        item.statusDisplay,
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: isWatching
+                              ? (isDark ? const Color(0xFF64D2FF) : const Color(0xFF007AFF))
+                              : (isDark ? Colors.white70 : Colors.black87),
+                        ),
+                      ),
+                    );
+                  },
                 ),
 
                 // Merit Prestige Badge (jika ada yang memberi merit)
@@ -1373,8 +1350,7 @@ class _ReviewHomeScreenState extends State<ReviewHomeScreen> {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildEmptyState(bool isDark) {

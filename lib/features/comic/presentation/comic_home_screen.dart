@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show ImageFilter;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -9,6 +10,7 @@ import '../../../shared/widgets/common_widgets.dart';
 import '../../../shared/widgets/poster_card.dart';
 import '../../../shared/widgets/shimmer_placeholder.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../../../shared/widgets/bouncy_tap.dart';
 import '../../comic/data/comic_repository.dart';
 import '../../comic/data/models/comic_model.dart';
 import '../../comic/presentation/comic_detail_screen.dart';
@@ -19,7 +21,6 @@ import '../../anime/data/models/anime_model.dart' show GenreModel;
 import '../../genre/presentation/unified_genre_screen.dart';
 import '../../genre/presentation/genre_detail_screen.dart';
 import '../../../shared/widgets/featured_content_slider.dart';
-import '../../chat/presentation/widgets/chat_marquee_banner.dart';
 import '../../../shared/widgets/ad_banner_widget.dart';
 import '../../notifications/presentation/widgets/universal_notification_button.dart';
 import '../../announcement/presentation/widgets/announcement_banner.dart';
@@ -41,8 +42,12 @@ class _ComicHomeScreenState extends State<ComicHomeScreen> {
     {'name': 'Fantasy', 'slug': 'fantasy'},
     {'name': 'Reincarnation', 'slug': 'reincarnation'},
     {'name': 'Supernatural', 'slug': 'supernatural'},
+    {'name': 'Martial Arts', 'slug': 'martial-arts'},
     {'name': 'School Life', 'slug': 'school-life'},
     {'name': 'Comedy', 'slug': 'comedy'},
+    {'name': 'Isekai', 'slug': 'isekai'},
+    {'name': 'Seinen', 'slug': 'seinen'},
+    {'name': 'Drama', 'slug': 'drama'},
   ];
 
   final _repo = ComicRepository.instance;
@@ -100,13 +105,15 @@ class _ComicHomeScreenState extends State<ComicHomeScreen> {
     try {
       final results = await Future.wait([
         _repo.populer(),
-        _repo.terbaru(
-          tipe: _selectedTipe,
-          genre: _selectedGenre,
-          status: _selectedStatus,
-          orderby: _selectedOrderby,
-          page: 1,
-        ),
+        _selectedGenre != null && _selectedGenre!.isNotEmpty
+            ? _repo.byGenre(_selectedGenre!, page: 1)
+            : _repo.terbaru(
+                tipe: _selectedTipe,
+                genre: _selectedGenre,
+                status: _selectedStatus,
+                orderby: _selectedOrderby,
+                page: 1,
+              ),
         _repo.genres(),
       ]);
       if (!mounted) return;
@@ -135,13 +142,18 @@ class _ComicHomeScreenState extends State<ComicHomeScreen> {
       });
     }
     try {
-      final list = await _repo.terbaru(
-        tipe: _selectedTipe,
-        genre: _selectedGenre,
-        status: _selectedStatus,
-        orderby: _selectedOrderby,
-        page: _page,
-      );
+      final List<ComicModel> list;
+      if (_selectedGenre != null && _selectedGenre!.isNotEmpty) {
+        list = await _repo.byGenre(_selectedGenre!, page: _page);
+      } else {
+        list = await _repo.terbaru(
+          tipe: _selectedTipe,
+          genre: _selectedGenre,
+          status: _selectedStatus,
+          orderby: _selectedOrderby,
+          page: _page,
+        );
+      }
       if (!mounted) return;
       setState(() {
         _terbaru = list;
@@ -162,13 +174,18 @@ class _ComicHomeScreenState extends State<ComicHomeScreen> {
 
     try {
       final nextPage = _page + 1;
-      final more = await _repo.terbaru(
-        tipe: _selectedTipe,
-        genre: _selectedGenre,
-        status: _selectedStatus,
-        orderby: _selectedOrderby,
-        page: nextPage,
-      );
+      final List<ComicModel> more;
+      if (_selectedGenre != null && _selectedGenre!.isNotEmpty) {
+        more = await _repo.byGenre(_selectedGenre!, page: nextPage);
+      } else {
+        more = await _repo.terbaru(
+          tipe: _selectedTipe,
+          genre: _selectedGenre,
+          status: _selectedStatus,
+          orderby: _selectedOrderby,
+          page: nextPage,
+        );
+      }
       if (!mounted) return;
       setState(() {
         _page = nextPage;
@@ -359,25 +376,26 @@ class _ComicHomeScreenState extends State<ComicHomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Tooltip(
         message: tooltip,
-        child: GestureDetector(
+        child: BouncyTap(
+          scaleDown: 0.88,
           onTap: onTap,
-          child: Container(
+          child: GlassContainer(
             width: 36,
             height: 36,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
+            borderRadius: BorderRadius.circular(18),
+            blur: 10,
+            border: Border.all(
               color: isDark
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : Colors.black.withValues(alpha: 0.05),
-              border: Border.all(
-                color: isDark ? AppColors.iosHairlineDark : AppColors.iosHairlineLight,
-                width: 0.5,
-              ),
+                  ? Colors.white.withValues(alpha: 0.15)
+                  : Colors.black.withValues(alpha: 0.08),
+              width: 0.8,
             ),
-            child: Icon(
-              icon,
-              size: 17,
-              color: isDark ? AppColors.iosTextPrimaryDark : AppColors.iosTextPrimaryLight,
+            child: Center(
+              child: Icon(
+                icon,
+                size: 17,
+                color: isDark ? AppColors.iosTextPrimaryDark : AppColors.iosTextPrimaryLight,
+              ),
             ),
           ),
         ),
@@ -394,7 +412,8 @@ class _ComicHomeScreenState extends State<ComicHomeScreen> {
       final isNew = _terbaru.contains(c);
       return FeaturedContentItem(
         title: c.title,
-        imageUrl: c.thumb,
+        imageUrl: ComicModel.toHdUrl(c.thumb),
+        posterUrl: ComicModel.toHdUrl(c.thumb),
         eyebrowTag: isNew ? 'RILISAN TERBARU' : 'KOMIK POPULER',
         subtitle: c.latestChapter != null
             ? '${c.latestChapter} • ${c.type ?? "Komik"}'
@@ -523,14 +542,6 @@ class _ComicHomeScreenState extends State<ComicHomeScreen> {
               // Pemberitahuan / Announcement Banner
               const SliverToBoxAdapter(
                 child: AnnouncementBanner(),
-              ),
-
-              // Chat Komunitas Running Text Banner
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.only(top: 8, bottom: 4),
-                  child: ChatMarqueeBanner(),
-                ),
               ),
 
               // Daily XP Claim & 7-Day Streak Banner
@@ -689,7 +700,8 @@ class _ComicHomeScreenState extends State<ComicHomeScreen> {
                           separatorBuilder: (_, __) => const SizedBox(width: 8),
                           itemBuilder: (context, i) {
                             final g = _popularComicGenres[i];
-                            return GestureDetector(
+                            return BouncyTap(
+                              scaleDown: 0.92,
                               onTap: () => Navigator.push(
                                 context,
                                 CupertinoPageRoute(
@@ -699,30 +711,43 @@ class _ComicHomeScreenState extends State<ComicHomeScreen> {
                                   ),
                                 ),
                               ),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: isDark
-                                      ? AppColors.iosCardDark
-                                      : AppColors.iosCardLight,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: isDark
-                                        ? AppColors.iosHairlineDark
-                                        : AppColors.iosHairlineLight,
-                                    width: 0.5,
-                                  ),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    g['name']!,
-                                    style: TextStyle(
-                                      fontSize: 12.5,
-                                      fontWeight: FontWeight.w500,
-                                      letterSpacing: -0.2,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(20),
+                                child: BackdropFilter(
+                                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                    decoration: BoxDecoration(
                                       color: isDark
-                                          ? AppColors.iosTextPrimaryDark
-                                          : AppColors.iosTextPrimaryLight,
+                                          ? const Color(0xFF1C1C1E).withValues(alpha: 0.65)
+                                          : Colors.white.withValues(alpha: 0.75),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: isDark
+                                            ? Colors.white.withValues(alpha: 0.15)
+                                            : Colors.black.withValues(alpha: 0.08),
+                                        width: 0.8,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: isDark ? 0.20 : 0.05),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        g['name']!,
+                                        style: TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w500,
+                                          letterSpacing: -0.2,
+                                          color: isDark
+                                              ? AppColors.iosTextPrimaryDark
+                                              : AppColors.iosTextPrimaryLight,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -969,17 +994,13 @@ class _ComicHomeScreenState extends State<ComicHomeScreen> {
                         const SizedBox(height: 12),
 
                         // Tipe Segmented Control (Semua, Manga, Manhwa, Manhua)
-                        Container(
+                        GlassContainer(
+                          borderRadius: BorderRadius.circular(18),
                           padding: const EdgeInsets.all(3.5),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.08)
-                                : Colors.black.withValues(alpha: 0.05),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(
-                              color: isDark ? AppColors.iosHairlineDark : AppColors.iosHairlineLight,
-                              width: 0.5,
-                            ),
+                          blur: 10,
+                          border: Border.all(
+                            color: isDark ? const Color(0x33FFFFFF) : const Color(0x66FFFFFF),
+                            width: 0.8,
                           ),
                           child: Row(
                             children: [
@@ -1236,22 +1257,22 @@ class _ComicHomeScreenState extends State<ComicHomeScreen> {
     required VoidCallback onTap,
     VoidCallback? onClear,
   }) {
-    return GestureDetector(
+    return BouncyTap(
+      scaleDown: 0.94,
       onTap: onTap,
-      child: Container(
+      child: GlassContainer(
+        borderRadius: BorderRadius.circular(16),
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6.5),
-        decoration: BoxDecoration(
+        color: isActive
+            ? (isDark ? Colors.white : Colors.black)
+            : (isDark ? const Color(0x331C1C1E) : const Color(0xB8FFFFFF)),
+        border: Border.all(
           color: isActive
               ? (isDark ? Colors.white : Colors.black)
-              : (isDark ? AppColors.iosCardDark : AppColors.iosCardLight),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isActive
-                ? (isDark ? Colors.white : Colors.black)
-                : (isDark ? AppColors.iosHairlineDark : AppColors.iosHairlineLight),
-            width: 0.6,
-          ),
+              : (isDark ? const Color(0x33FFFFFF) : const Color(0x66FFFFFF)),
+          width: 0.8,
         ),
+        blur: 10,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [

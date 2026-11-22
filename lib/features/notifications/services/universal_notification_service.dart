@@ -3,10 +3,12 @@ import 'package:flutter/foundation.dart';
 import '../../chat/data/chat_repository.dart';
 import '../../chat/data/models/chat_model.dart';
 import '../data/notification_repository.dart';
+import '../../announcement/data/announcement_repository.dart';
 
 /// Universal Notification Service that unifies notifications from:
 /// 1. Anime Episode Comments (likes & replies)
 /// 2. General Community Chat (mentions @ & message replies)
+/// 3. Official Announcements & Releases
 class UniversalNotificationService {
   UniversalNotificationService._();
   static final UniversalNotificationService instance = UniversalNotificationService._();
@@ -14,6 +16,7 @@ class UniversalNotificationService {
   final ValueNotifier<int> totalUnreadNotifier = ValueNotifier<int>(0);
   final ValueNotifier<int> commentUnreadNotifier = ValueNotifier<int>(0);
   final ValueNotifier<int> chatUnreadNotifier = ValueNotifier<int>(0);
+  final ValueNotifier<int> announcementUnreadNotifier = ValueNotifier<int>(0);
 
   Timer? _pollingTimer;
   bool _isRefreshing = false;
@@ -38,6 +41,7 @@ class UniversalNotificationService {
       final results = await Future.wait([
         NotificationRepository.instance.getUnreadCommentNotificationsCount(),
         ChatRepository.instance.getNotificationSummary(),
+        AnnouncementRepository.instance.fetchActiveAnnouncements(),
       ]);
 
       final int commentUnread = (results[0] as num?)?.toInt() ?? 0;
@@ -45,10 +49,12 @@ class UniversalNotificationService {
       final int chatUnread = chatSummary != null
           ? (chatSummary.unreadMentions + chatSummary.unreadReplies)
           : 0;
+      final int announcementUnread = AnnouncementRepository.instance.unreadCount;
 
       commentUnreadNotifier.value = commentUnread;
       chatUnreadNotifier.value = chatUnread;
-      totalUnreadNotifier.value = commentUnread + chatUnread;
+      announcementUnreadNotifier.value = announcementUnread;
+      totalUnreadNotifier.value = commentUnread + chatUnread + announcementUnread;
     } catch (_) {} finally {
       _isRefreshing = false;
     }
@@ -66,13 +72,14 @@ class UniversalNotificationService {
       commentUnreadNotifier.value = next;
     }
     totalUnreadNotifier.value =
-        (commentUnreadNotifier.value + chatUnreadNotifier.value).clamp(0, 99999);
+        (commentUnreadNotifier.value + chatUnreadNotifier.value + announcementUnreadNotifier.value).clamp(0, 99999);
   }
 
-  /// Mark all notifications across both Anime Comments & Chat as read
+  /// Mark all notifications across Anime Comments, Chat, and Announcements as read
   Future<void> markAllAsRead() async {
     commentUnreadNotifier.value = 0;
     chatUnreadNotifier.value = 0;
+    announcementUnreadNotifier.value = 0;
     totalUnreadNotifier.value = 0;
 
     await Future.wait<dynamic>([
@@ -80,6 +87,7 @@ class UniversalNotificationService {
       ChatRepository.instance.markAllMentionsRead(),
       ChatRepository.instance.markAllReplyNotificationsRead(),
       ChatRepository.instance.markAllAsRead(),
+      AnnouncementRepository.instance.markAllAnnouncementsAsRead(),
     ]);
   }
 

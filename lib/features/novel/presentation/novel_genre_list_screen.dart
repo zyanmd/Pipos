@@ -279,7 +279,7 @@ class _NovelGenreListScreenState extends State<NovelGenreListScreen> {
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
-                                            '${g.count} Novel',
+                                            g.count > 0 ? '${g.count} Novel' : 'Koleksi Novel',
                                             style: GoogleFonts.inter(
                                               fontSize: 11,
                                               fontWeight: FontWeight.w500,

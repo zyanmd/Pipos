@@ -8,8 +8,8 @@ class AppUpdateService {
   AppUpdateService._();
   static final AppUpdateService instance = AppUpdateService._();
 
-  static const String currentVersion = '1.2.8';
-  static const int currentBuildNumber = 4070;
+  static const String currentVersion = '1.2.9';
+  static const int currentBuildNumber = 4080;
 
   /// Notifier untuk update yang tersedia (agar UI profil & navbar dapat merespons tanpa pop-up)
   final ValueNotifier<AppUpdateModel?> availableUpdateNotifier = ValueNotifier<AppUpdateModel?>(null);
@@ -283,6 +283,16 @@ class AppUpdateService {
     fileSize: '~98 MB',
     changelog: const [
       UpdateChangelogItem(
+        version: '1.2.9',
+        date: '2026-11-22',
+        changes:
+            '🚀 **Versi 1.2.9 - Fitur Nobar (Watch Party) & Pemutar Windows Widescreen!**\n'
+            '• **Live Chat & Baki Emotikon Cepat** - Tampilan live chat interaktif lengkap dengan 10 emotikon reaksi instan di layar pemutar video.\n'
+            '• **Mode Widescreen Desktop Windows** - Layout 2 kolom (pemutar di kiri, chat sidebar di kanan) yang proporsional dan tidak menenggelamkan kontrol.\n'
+            '• **Dukungan Fullscreen & Keyboard Shortcut** - Masuk/keluar fullscreen dengan tombol F atau Esc, spasi untuk play/pause, dan kontrol volume cepat.\n'
+            '• **Proteksi Host-Only** - Hanya host yang dapat mengubah episode, resolusi, dan server demi sinkronisasi sempurna.',
+      ),
+      UpdateChangelogItem(
         version: '1.2.8',
         date: '2026-11-17',
         changes:
@@ -328,6 +338,16 @@ class AppUpdateService {
     updateUrl: 'https://sfile.co/Dj19cVRkhLH',
     fileSize: '~98 MB',
     changelog: const [
+      UpdateChangelogItem(
+        version: '1.2.9',
+        date: '2026-11-22',
+        changes:
+            '🚀 **Versi 1.2.9 - Fitur Nobar (Watch Party) & Pemutar Windows Widescreen!**\n'
+            '• **Live Chat & Baki Emotikon Cepat** - Tampilan live chat interaktif lengkap dengan 10 emotikon reaksi instan di layar pemutar video.\n'
+            '• **Mode Widescreen Desktop Windows** - Layout 2 kolom (pemutar di kiri, chat sidebar di kanan) yang proporsional dan tidak menenggelamkan kontrol.\n'
+            '• **Dukungan Fullscreen & Keyboard Shortcut** - Masuk/keluar fullscreen dengan tombol F atau Esc, spasi untuk play/pause, dan kontrol volume cepat.\n'
+            '• **Proteksi Host-Only** - Hanya host yang dapat mengubah episode, resolusi, dan server demi sinkronisasi sempurna.',
+      ),
       UpdateChangelogItem(
         version: '1.2.8',
         date: '2026-11-17',

@@ -22,6 +22,7 @@ import '../../../core/services/donation_service.dart';
 import '../../../shared/widgets/ad_banner_widget.dart';
 import 'privacy_policy_screen.dart';
 import '../../../core/services/onesignal_service.dart';
+import '../../../core/services/auto_rotate_service.dart';
 import '../../announcement/presentation/app_features_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -187,6 +188,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       theme.setAnimationEnabled(!theme.isAnimationEnabled);
                     },
                   ),
+                  if (!kIsWeb && Platform.isAndroid) ...[
+                    _buildDivider(isDark),
+                    ListenableBuilder(
+                      listenable: AutoRotateService.instance,
+                      builder: (context, _) {
+                        final autoRotate = AutoRotateService.instance;
+                        return _buildSettingTile(
+                          icon: CupertinoIcons.device_phone_landscape,
+                          iconBg: const Color(0xFFFF2D55),
+                          title: 'Matikan Auto-Rotate saat Keluar',
+                          subtitle: autoRotate.isAutoDisableOnExit
+                              ? (autoRotate.hasWriteSettingsPermission
+                                  ? 'Otomatis matikan rotasi sistem saat aplikasi ditutup / background'
+                                  : 'Perlu izin setelan sistem (Ketuk untuk beri izin)')
+                              : 'Tidak aktif (Rotasi sistem tetap mengikuti HP)',
+                          isDark: isDark,
+                          trailing: CupertinoSwitch(
+                            value: autoRotate.isAutoDisableOnExit,
+                            activeTrackColor: const Color(0xFF34C759),
+                            onChanged: (val) async {
+                              HapticFeedback.selectionClick();
+                              if (val && !autoRotate.hasWriteSettingsPermission) {
+                                await autoRotate.openPermissionSettings();
+                              }
+                              await autoRotate.setAutoDisableOnExit(val);
+                            },
+                          ),
+                          onTap: () async {
+                            if (!autoRotate.hasWriteSettingsPermission) {
+                              await autoRotate.openPermissionSettings();
+                            } else {
+                              final next = !autoRotate.isAutoDisableOnExit;
+                              await autoRotate.setAutoDisableOnExit(next);
+                            }
+                          },
+                        );
+                      },
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 20),

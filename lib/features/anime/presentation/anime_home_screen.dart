@@ -11,6 +11,7 @@ import '../../../shared/widgets/common_widgets.dart';
 import '../../../shared/widgets/poster_card.dart';
 import '../../../shared/widgets/shimmer_placeholder.dart';
 import '../../../shared/widgets/glass_container.dart';
+import '../../../shared/widgets/bouncy_tap.dart';
 import '../../anime/data/anime_repository.dart';
 import '../../anime/data/models/anime_model.dart';
 import '../../anime/presentation/anime_detail_screen.dart';
@@ -24,7 +25,6 @@ import '../../genre/presentation/genre_detail_screen.dart';
 import '../../../shared/widgets/featured_content_slider.dart';
 import '../data/models/ylnime_extra_models.dart';
 import 'anime_hyper_screen.dart';
-import 'anime_episode_player.dart';
 import '../../../shared/widgets/app_network_image.dart';
 import '../../../shared/widgets/ad_banner_widget.dart';
 import '../../notifications/presentation/widgets/universal_notification_button.dart';
@@ -32,6 +32,7 @@ import '../../announcement/presentation/widgets/announcement_banner.dart';
 import '../../reels/data/models/reel_model.dart';
 import '../../reels/data/reels_repository.dart';
 import '../../reels/presentation/anime_reels_screen.dart';
+import '../../nobar/presentation/widgets/watch_mode_sheet.dart';
 import '../../reels/presentation/widgets/anime_reels_tray.dart';
 import '../../../core/services/adult_content_service.dart';
 import '../../jav/presentation/jav_home_screen.dart';
@@ -431,18 +432,15 @@ class _AnimeHomeScreenState extends State<AnimeHomeScreen> {
     final epId = (rawEpId != null && rawEpId != seriesSlug) ? rawEpId : '';
 
     if (epId.isNotEmpty) {
-      Navigator.of(context, rootNavigator: true).push(
-        CupertinoPageRoute(
-          builder: (_) => AnimeEpisodePlayerScreen(
-            episodeId: epId,
-            episodeLabel: item.episode ?? 'Episode',
-            episodeUrl: item.episodeUrl ?? item.url,
-            animeId: seriesSlug,
-            animeTitle: item.title,
-            animeThumb: item.cover,
-            startAt: item.currentTime > 0 ? Duration(seconds: item.currentTime) : Duration.zero,
-          ),
-        ),
+      showWatchModeSheet(
+        context: context,
+        animeId: seriesSlug ?? '',
+        animeTitle: item.title,
+        animeThumb: item.cover ?? '',
+        episodeId: epId,
+        episodeLabel: item.episode ?? 'Episode',
+        episodeUrl: item.episodeUrl ?? item.url,
+        startAt: item.currentTime > 0 ? Duration(seconds: item.currentTime) : Duration.zero,
       ).then((_) => _load());
     } else {
       final detailId = seriesSlug ?? (item.animeId != null && item.animeId!.isNotEmpty ? item.animeId! : item.title);
@@ -766,29 +764,28 @@ class _AnimeHomeScreenState extends State<AnimeHomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Tooltip(
         message: tooltip,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () {
-            HapticFeedback.lightImpact();
-            onTap();
-          },
-          child: Container(
+        child: BouncyTap(
+          scaleDown: 0.88,
+          onTap: onTap,
+          child: GlassContainer(
             width: 38,
             height: 38,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: backgroundColor ??
-                  (isDark ? const Color(0xFF16161A) : const Color(0xFFF2F2F7)),
-              border: Border.all(
-                color: borderColor ??
-                    (isDark ? const Color(0xFF262626) : const Color(0xFFDBDBDB)),
-                width: 0.8,
-              ),
+            borderRadius: BorderRadius.circular(19),
+            blur: 10,
+            color: backgroundColor,
+            border: Border.all(
+              color: borderColor ??
+                  (isDark
+                      ? Colors.white.withValues(alpha: 0.15)
+                      : Colors.black.withValues(alpha: 0.08)),
+              width: 0.8,
             ),
-            child: Icon(
-              icon,
-              size: 18,
-              color: iconColor ?? (isDark ? Colors.white : Colors.black),
+            child: Center(
+              child: Icon(
+                icon,
+                size: 18,
+                color: iconColor ?? (isDark ? Colors.white : Colors.black),
+              ),
             ),
           ),
         ),
@@ -802,21 +799,13 @@ class _AnimeHomeScreenState extends State<AnimeHomeScreen> {
     required VoidCallback onTap,
     required bool isDark,
   }) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      child: Container(
+    return BouncyTap(
+      scaleDown: 0.92,
+      onTap: onTap,
+      child: GlassContainer(
+        borderRadius: BorderRadius.circular(24),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF16161A) : const Color(0xFFF2F2F7),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: isDark ? const Color(0xFF262626) : const Color(0xFFDBDBDB),
-            width: 0.5,
-          ),
-        ),
+        blur: 10,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1129,26 +1118,18 @@ class _AnimeHomeScreenState extends State<AnimeHomeScreen> {
                       itemBuilder: (context, index) {
                         final item = _continueWatching[index];
                         final progressVal = (item.progress / 100.0).clamp(0.0, 1.0);
-                        return GestureDetector(
+                        return BouncyTap(
+                          scaleDown: 0.94,
                           onTap: () => _resumeWatching(item),
-                          child: Container(
+                          child: GlassContainer(
                             width: 220,
-                            decoration: BoxDecoration(
-                              color: isDark ? AppColors.iosCardDark : AppColors.iosCardLight,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: isDark ? AppColors.iosHairlineDark : AppColors.iosHairlineLight,
-                                width: 0.5,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            blur: 10,
                             clipBehavior: Clip.antiAlias,
+                            border: Border.all(
+                              color: isDark ? const Color(0x33FFFFFF) : const Color(0x66FFFFFF),
+                              width: 0.8,
+                            ),
                             child: Stack(
                               children: [
                                 Row(
@@ -1315,7 +1296,8 @@ class _AnimeHomeScreenState extends State<AnimeHomeScreen> {
                           separatorBuilder: (_, __) => const SizedBox(width: 8),
                           itemBuilder: (context, i) {
                             final g = _popularAnimeGenres[i];
-                            return GestureDetector(
+                            return BouncyTap(
+                              scaleDown: 0.92,
                               onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -1325,20 +1307,10 @@ class _AnimeHomeScreenState extends State<AnimeHomeScreen> {
                                   ),
                                 ),
                               ),
-                              child: Container(
+                              child: GlassContainer(
+                                borderRadius: BorderRadius.circular(24),
                                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: isDark
-                                      ? AppColors.iosCardDark
-                                      : AppColors.iosCardLight,
-                                  borderRadius: BorderRadius.circular(24),
-                                  border: Border.all(
-                                    color: isDark
-                                        ? AppColors.iosHairlineDark
-                                        : AppColors.iosHairlineLight,
-                                    width: 0.5,
-                                  ),
-                                ),
+                                blur: 10,
                                 child: Center(
                                   child: Text(
                                     g['name']!,

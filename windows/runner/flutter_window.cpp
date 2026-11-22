@@ -198,8 +198,18 @@ bool FlutterWindow::SetFullScreen(bool fullscreen) {
     ::SetWindowLongPtr(hwnd, GWL_EXSTYLE, prev_fullscreen_ex_style_);
     ::SetWindowPlacement(hwnd, &prev_fullscreen_placement_);
 
+    if (prev_fullscreen_placement_.showCmd == SW_SHOWMAXIMIZED) {
+      ::ShowWindow(hwnd, SW_MAXIMIZE);
+    } else {
+      ::ShowWindow(hwnd, SW_SHOWNORMAL);
+    }
+
     ::SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0,
                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+
+    if (flutter_controller_) {
+      flutter_controller_->ForceRedraw();
+    }
 
     if (pip_channel_) {
       pip_channel_->InvokeMethod("onFullscreenChanged",

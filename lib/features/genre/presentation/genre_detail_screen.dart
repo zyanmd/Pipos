@@ -72,7 +72,10 @@ class _GenreDetailScreenState extends State<GenreDetailScreen> {
 
     try {
       if (widget.isAnime) {
-        final list = await AnimeRepository.instance.byGenre(widget.genre.slug, page: 1);
+        var list = await AnimeRepository.instance.byGenre(widget.genre.slug, page: 1);
+        if (list.isEmpty && widget.genre.name.isNotEmpty) {
+          list = await AnimeRepository.instance.search(widget.genre.name);
+        }
         if (!mounted) return;
         setState(() {
           _animeItems = list;
@@ -80,7 +83,10 @@ class _GenreDetailScreenState extends State<GenreDetailScreen> {
           _loading = false;
         });
       } else {
-        final list = await ComicRepository.instance.byGenre(widget.genre.slug, page: 1);
+        var list = await ComicRepository.instance.byGenre(widget.genre.slug, page: 1);
+        if (list.isEmpty && widget.genre.name.isNotEmpty) {
+          list = await ComicRepository.instance.search(widget.genre.name);
+        }
         if (!mounted) return;
         setState(() {
           _comicItems = list;

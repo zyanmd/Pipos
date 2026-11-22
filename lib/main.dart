@@ -15,7 +15,9 @@ import 'core/services/adult_content_service.dart';
 import 'core/services/anime_watch_progress_service.dart';
 import 'core/services/deep_link_service.dart';
 import 'core/services/display_mode_service.dart';
+import 'core/services/auto_rotate_service.dart';
 import 'core/services/home_widget_service.dart';
+import 'core/services/mal_service.dart';
 import 'core/services/onesignal_service.dart';
 import 'core/services/pip_service.dart';
 import 'core/theme/app_theme.dart';
@@ -45,7 +47,7 @@ void main() async {
       options: {
         'platforms': ['android', 'windows', 'linux', 'macos', 'ios'],
         'video.decoders': isAndroid
-            ? (is32Bit ? ['FFmpeg'] : ['AMediaCodec', 'FFmpeg'])
+            ? ['FFmpeg', 'AMediaCodec']
             : ['D3D11', 'FFmpeg'],
         'player': {
           'buffer.range': isAndroid ? (is32Bit ? '15000' : '30000') : '60000',
@@ -89,6 +91,9 @@ void main() async {
 
   // Edge-to-edge display with transparent navigation bar (iOS style)
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]).ignore();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -106,6 +111,8 @@ void main() async {
     ThemeProvider.instance.init(),
     AdultContentService.instance.init(),
     AnimeWatchProgressService.instance.init(),
+    MalService.instance.init(),
+    AutoRotateService.instance.init(),
   ]);
 
   // Restore session auth secara instan dari cache lokal (0ms, tanpa flicker)
@@ -124,6 +131,7 @@ void main() async {
   runApp(
     LiquidGlassWidgets.wrap(
       child: const MokoApp(),
+      theme: const GlassThemeData.ios26(),
       brightnessResolver: Theme.maybeBrightnessOf,
     ),
   );
@@ -163,6 +171,13 @@ class _MokoAppState extends State<MokoApp> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       DisplayModeService.instance.reassertOnResume();
       UniversalNotificationService.instance.refreshUnreadCounts();
+      AutoRotateService.instance.checkPermission();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      if (!PipService.instance.isInPip.value) {
+        AutoRotateService.instance.handleAppBackground();
+      }
     }
   }
 
@@ -201,14 +216,17 @@ class _MokoAppState extends State<MokoApp> with WidgetsBindingObserver {
               builder: (_) => const App404Screen(),
             ),
             builder: (ctx, child) {
-              return MediaQuery(
-                data: MediaQuery.of(ctx).copyWith(
-                  // Make text scale a bit more readable on big phones.
-                  textScaler: TextScaler.linear(
-                    (MediaQuery.of(ctx).textScaler.scale(1.0)).clamp(0.9, 1.15),
+              return GlassTheme(
+                data: const GlassThemeData.ios26(),
+                child: MediaQuery(
+                  data: MediaQuery.of(ctx).copyWith(
+                    // Make text scale a bit more readable on big phones.
+                    textScaler: TextScaler.linear(
+                      (MediaQuery.of(ctx).textScaler.scale(1.0)).clamp(0.9, 1.15),
+                    ),
                   ),
+                  child: child!,
                 ),
-                child: child!,
               );
             },
           );

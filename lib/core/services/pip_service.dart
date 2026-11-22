@@ -1,7 +1,9 @@
+import 'dart:async' show unawaited;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'auto_rotate_service.dart';
 
 /// Service terpusat untuk mengontrol Picture-in-Picture (PiP) dan Fullscreen khusus pemutar video.
 /// Mendukung Android (Native OS PiP) dan Windows (Floating Always-on-Top PiP).
@@ -132,6 +134,8 @@ class PipService {
     isFullscreen.value = false;
     setAutoPip(false);
     _setKeepScreenOn(false);
+    setBrightness(-1.0);
+    unawaited(AutoRotateService.instance.handleAppBackground());
   }
 
   /// Masuk mode fullscreen (True OS Fullscreen di Windows, Immersive di Mobile)
@@ -157,8 +161,6 @@ class PipService {
               DeviceOrientation.portraitUp,
             ]);
           } else {
-            // Gunakan sensorLandscape (landscapeLeft + landscapeRight) di level Flutter
-            // sambil tetap menonaktifkan OrientationEventListener native yang memicu tombol rotasi
             await SystemChrome.setPreferredOrientations([
               DeviceOrientation.landscapeLeft,
               DeviceOrientation.landscapeRight,
@@ -169,6 +171,7 @@ class PipService {
           } catch (e) {
             debugPrint('[PipService] enterFullscreen native error: $e');
           }
+          unawaited(AutoRotateService.instance.handleFullscreenEnter());
         }
         return true;
       } catch (e) {
@@ -192,6 +195,14 @@ class PipService {
     } else {
       try {
         await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+        SystemChrome.setSystemUIOverlayStyle(
+          const SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: Brightness.light,
+            systemNavigationBarColor: Colors.transparent,
+            systemNavigationBarIconBrightness: Brightness.light,
+          ),
+        );
         if (!kIsWeb &&
             (defaultTargetPlatform == TargetPlatform.android ||
              defaultTargetPlatform == TargetPlatform.iOS)) {
@@ -202,13 +213,25 @@ class PipService {
           }
           await SystemChrome.setPreferredOrientations([
             DeviceOrientation.portraitUp,
+            DeviceOrientation.portraitDown,
           ]);
+          unawaited(AutoRotateService.instance.handleFullscreenExit());
+          setBrightness(-1.0);
         }
         return true;
       } catch (e) {
         debugPrint('[PipService] exitFullscreen mobile error: $e');
         return false;
       }
+    }
+  }
+
+  /// Mengatur kecerahan layar perangkat (0.01 - 1.0, atau -1.0 untuk mengembalikan ke sistem)
+  Future<void> setBrightness(double brightness) async {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        await _channel.invokeMethod('setBrightness', {'brightness': brightness});
+      } catch (_) {}
     }
   }
 

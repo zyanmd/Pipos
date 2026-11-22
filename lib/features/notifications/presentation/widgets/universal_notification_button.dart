@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../../../../shared/widgets/bouncy_tap.dart';
+import '../../../../shared/widgets/glass_container.dart';
 import '../../services/universal_notification_service.dart';
 import '../universal_notification_modal.dart';
 
@@ -37,10 +38,9 @@ class UniversalNotificationButton extends StatelessWidget {
         builder: (context, totalUnread, _) {
           return Tooltip(
             message: totalUnread > 0 ? 'Notifikasi ($totalUnread baru)' : 'Notifikasi',
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
+            child: BouncyTap(
+              scaleDown: 0.88,
               onTap: () {
-                HapticFeedback.lightImpact();
                 if (customOnTap != null) {
                   customOnTap!();
                 } else {
@@ -51,23 +51,25 @@ class UniversalNotificationButton extends StatelessWidget {
                 clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
-                  Container(
+                  GlassContainer(
                     width: size,
                     height: size,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: backgroundColor ??
-                          (isDark ? const Color(0xFF16161A) : const Color(0xFFF2F2F7)),
-                      border: Border.all(
-                        color: borderColor ??
-                            (isDark ? const Color(0xFF262626) : const Color(0xFFDBDBDB)),
-                        width: 0.8,
-                      ),
+                    borderRadius: BorderRadius.circular(size / 2),
+                    blur: 10,
+                    color: backgroundColor,
+                    border: Border.all(
+                      color: borderColor ??
+                          (isDark
+                              ? Colors.white.withValues(alpha: 0.15)
+                              : Colors.black.withValues(alpha: 0.08)),
+                      width: 0.8,
                     ),
-                    child: Icon(
-                      totalUnread > 0 ? CupertinoIcons.bell_fill : CupertinoIcons.bell,
-                      size: size * 0.48,
-                      color: iconColor ?? (isDark ? Colors.white : Colors.black),
+                    child: Center(
+                      child: Icon(
+                        totalUnread > 0 ? CupertinoIcons.bell_fill : CupertinoIcons.bell,
+                        size: size * 0.48,
+                        color: iconColor ?? (isDark ? Colors.white : Colors.black),
+                      ),
                     ),
                   ),
                   if (totalUnread > 0)

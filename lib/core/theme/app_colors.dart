@@ -10,23 +10,40 @@ class AppColors {
   static const Color primaryLight = Color(0xFF333333);
   static const Color error        = Color(0xFF555555);
 
-  // ── Light theme (Pure Monochrome) ─────────────────────────────────────────
-  static const Color lightBackground  = Color(0xFFFFFFFF);
-  static const Color lightSurface     = Color(0xFFF7F7F8);
-  static const Color lightSurfaceAlt  = Color(0xFFEFEFEF);
-  static const Color lightCard        = Color(0xFFFFFFFF);
-  static const Color lightDivider     = Color(0xFFE5E5E5);
-  static const Color lightBorder      = Color(0xFFD8D8D8);
-  static const Color lightTextPrimary = Color(0xFF000000);
-  static const Color lightTextMuted   = Color(0xFF737373);
+  // ── iOS 26 Liquid Glass tokens ────────────────────────────────────────────
+  /// Translucent surfaces applied globally through ThemeData.
+  static const Color glassLight = Color(0xB3FFFFFF);
+  static const Color glassLightStrong = Color(0xE6FFFFFF);
+  static const Color glassLightBorder = Color(0x66FFFFFF);
+  static const Color glassLightTint = Color(0x12007AFF);
 
-  // ── Dark theme (Pure OLED True Black & Neutral Grays) ───────────────────
+  static const Color glassDark = Color(0x241C1C1E);
+  static const Color glassDarkStrong = Color(0x401C1C1E);
+  static const Color glassDarkBorder = Color(0x33FFFFFF);
+  static const Color glassDarkTint = Color(0x140A84FF);
+
+  /// Specular highlight painted on the top edge of glass surfaces.
+  static const Color glassHighlight = Color(0x4DFFFFFF);
+  static const Color glassShadow = Color(0x44000000);
+
+  // ── Light theme (Apple iOS System Grouped) ─────────────────────────────────
+  static const Color lightBackground  = Color(0xFFF2F2F7);
+  static const Color lightSurface     = Color(0xFFFFFFFF);
+  static const Color lightSurfaceAlt  = Color(0xFFE5E5EA);
+  static const Color lightCard        = Color(0xFFFFFFFF);
+  static const Color lightDivider     = Color(0xFFC6C6C8);
+  static const Color lightBorder      = Color(0x0F000000);
+  static const Color lightTextPrimary = Color(0xFF000000);
+  static const Color lightTextMuted   = Color(0xFF8E8E93);
+
+  // ── Dark theme (Pure OLED True Black & System Grays) ─────────────────────
   static const Color darkBackground  = Color(0xFF000000);
-  static const Color darkSurface     = Color(0xFF121212);
-  static const Color darkSurfaceAlt  = Color(0xFF1E1E1E);
-  static const Color darkCard        = Color(0xFF161616);
-  static const Color darkDivider     = Color(0xFF262626);
-  static const Color darkBorder      = Color(0xFF2E2E2E);
+  static const Color darkSurface     = Color(0xFF1C1C1E);
+  static const Color darkSurfaceAlt  = Color(0xFF2C2C2E);
+  static const Color darkCard        = Color(0xFF1C1C1E);
+  static const Color darkCardElevated = Color(0xFF2C2C2E);
+  static const Color darkDivider     = Color(0xFF38383A);
+  static const Color darkBorder      = Color(0x1FFFFFFF);
   static const Color darkTextPrimary = Color(0xFFFFFFFF);
-  static const Color darkTextMuted   = Color(0xFFA3A3A3);
+  static const Color darkTextMuted   = Color(0xFF8E8E93);
 }

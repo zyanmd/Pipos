@@ -11,6 +11,20 @@ class AppColors {
   static const Color accent = Color(0xFF000000);
   static const Color brandGreen = Color(0xFF34C759);
 
+  // ── iOS 26 Liquid Glass tokens ────────────────────────────
+  static const Color glassLight = Color(0xB3FFFFFF);
+  static const Color glassLightStrong = Color(0xE6FFFFFF);
+  static const Color glassLightBorder = Color(0x66FFFFFF);
+  static const Color glassLightTint = Color(0x12007AFF);
+
+  static const Color glassDark = Color(0x241C1C1E);
+  static const Color glassDarkStrong = Color(0x401C1C1E);
+  static const Color glassDarkBorder = Color(0x33FFFFFF);
+  static const Color glassDarkTint = Color(0x140A84FF);
+
+  static const Color glassHighlight = Color(0x4DFFFFFF);
+  static const Color glassShadow = Color(0x44000000);
+
   /// Monochrome gradient (pure black → dark charcoal)
   static const List<Color> sakuraGradient = [
     Color(0xFF000000),

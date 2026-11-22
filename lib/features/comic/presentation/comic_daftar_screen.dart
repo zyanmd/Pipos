@@ -11,6 +11,7 @@ import '../data/comic_repository.dart';
 import '../data/models/comic_model.dart';
 import 'comic_detail_screen.dart';
 import '../../../shared/widgets/ad_banner_widget.dart';
+import '../../../shared/widgets/ios_capsule_search_bar.dart';
 
 /// Screen for browsing comics alphabetically (A-Z) and filtered by type.
 class ComicDaftarScreen extends StatefulWidget {
@@ -480,78 +481,28 @@ class _ComicDaftarScreenState extends State<ComicDaftarScreen> {
   Widget _buildSearchAndToolsBar(bool isDark, int count) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 2, 16, 8),
-      child: Container(
+      child: IosCapsuleSearchBar(
+        controller: _searchCtrl,
+        showCancelButton: false,
         height: 38,
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.iosCardDark : AppColors.iosCardLight,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isDark ? AppColors.iosHairlineDark : AppColors.iosHairlineLight,
-            width: 0.5,
+        hintText: 'Filter komik di halaman ini...',
+        trailing: Container(
+          margin: const EdgeInsets.only(right: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.04),
+            borderRadius: BorderRadius.circular(6),
           ),
-        ),
-        child: Row(
-          children: [
-            const SizedBox(width: 10),
-            Icon(
-              CupertinoIcons.search,
-              size: 16,
+          child: Text(
+            '$count komik',
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
               color: isDark ? AppColors.iosTextSecondaryDark : AppColors.iosTextSecondaryLight,
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextField(
-                controller: _searchCtrl,
-                style: TextStyle(
-                  fontSize: 13.5,
-                  color: isDark ? AppColors.iosTextPrimaryDark : AppColors.iosTextPrimaryLight,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'Filter komik di halaman ini...',
-                  hintStyle: TextStyle(
-                    fontSize: 13,
-                    color: isDark ? AppColors.iosTextSecondaryDark : AppColors.iosTextSecondaryLight,
-                  ),
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ),
-            if (_searchCtrl.text.isNotEmpty)
-              GestureDetector(
-                onTap: () {
-                  _searchCtrl.clear();
-                  FocusScope.of(context).unfocus();
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Icon(
-                    CupertinoIcons.clear_circled_solid,
-                    size: 16,
-                    color: isDark ? AppColors.iosTextSecondaryDark : AppColors.iosTextSecondaryLight,
-                  ),
-                ),
-              ),
-            Container(
-              margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.08)
-                    : Colors.black.withValues(alpha: 0.04),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                '$count komik',
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? AppColors.iosTextSecondaryDark : AppColors.iosTextSecondaryLight,
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

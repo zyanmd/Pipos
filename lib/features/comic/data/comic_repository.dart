@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/utils/app_error_formatter.dart';
 import '../../anime/data/models/anime_model.dart' show GenreModel;
@@ -53,19 +54,183 @@ class ComicRepository {
     return _asList(resp.data).map((e) => ComicModel.fromJson(e)).toList();
   }
 
+  /// Daftar genre komik kurasi komprehensif (kompatibel penuh dengan database komiku & MAL)
+  static const List<GenreModel> defaultComicGenres = [
+    GenreModel(slug: 'action', name: 'Action'),
+    GenreModel(slug: 'adventure', name: 'Adventure'),
+    GenreModel(slug: 'comedy', name: 'Comedy'),
+    GenreModel(slug: 'drama', name: 'Drama'),
+    GenreModel(slug: 'fantasy', name: 'Fantasy'),
+    GenreModel(slug: 'isekai', name: 'Isekai'),
+    GenreModel(slug: 'romance', name: 'Romance'),
+    GenreModel(slug: 'shounen', name: 'Shounen'),
+    GenreModel(slug: 'seinen', name: 'Seinen'),
+    GenreModel(slug: 'shoujo', name: 'Shoujo'),
+    GenreModel(slug: 'martial-arts', name: 'Martial Arts'),
+    GenreModel(slug: 'reincarnation', name: 'Reincarnation'),
+    GenreModel(slug: 'supernatural', name: 'Supernatural'),
+    GenreModel(slug: 'mystery', name: 'Mystery'),
+    GenreModel(slug: 'horror', name: 'Horror'),
+    GenreModel(slug: 'slice-of-life', name: 'Slice of Life'),
+    GenreModel(slug: 'sci-fi', name: 'Sci-Fi'),
+    GenreModel(slug: 'school-life', name: 'School Life'),
+    GenreModel(slug: 'sports', name: 'Sports'),
+    GenreModel(slug: 'historical', name: 'Historical'),
+    GenreModel(slug: 'psychological', name: 'Psychological'),
+    GenreModel(slug: 'manhwa', name: 'Manhwa'),
+    GenreModel(slug: 'manhua', name: 'Manhua'),
+    GenreModel(slug: 'magic', name: 'Magic'),
+    GenreModel(slug: 'super-power', name: 'Super Power'),
+    GenreModel(slug: 'thriller', name: 'Thriller'),
+    GenreModel(slug: 'tragedy', name: 'Tragedy'),
+    GenreModel(slug: 'time-travel', name: 'Time Travel'),
+    GenreModel(slug: 'webtoon', name: 'Webtoon'),
+    GenreModel(slug: 'dungeons', name: 'Dungeons'),
+    GenreModel(slug: 'leveling', name: 'Leveling'),
+    GenreModel(slug: 'overpowered-protagonist', name: 'Overpowered Protagonist'),
+    GenreModel(slug: 'system', name: 'System'),
+    GenreModel(slug: 'revenge', name: 'Revenge'),
+    GenreModel(slug: 'villainess', name: 'Villainess'),
+    GenreModel(slug: 'game', name: 'Game'),
+    GenreModel(slug: 'demons', name: 'Demons'),
+    GenreModel(slug: 'harem', name: 'Harem'),
+    GenreModel(slug: 'ecchi', name: 'Ecchi'),
+    GenreModel(slug: 'dark-fantasy', name: 'Dark Fantasy'),
+    GenreModel(slug: 'apocalypse', name: 'Apocalypse'),
+    GenreModel(slug: 'survival', name: 'Survival'),
+    GenreModel(slug: 'military', name: 'Military'),
+    GenreModel(slug: 'mecha', name: 'Mecha'),
+    GenreModel(slug: 'vampire', name: 'Vampire'),
+    GenreModel(slug: 'monsters', name: 'Monsters'),
+    GenreModel(slug: 'police', name: 'Police'),
+    GenreModel(slug: 'royalty', name: 'Royalty'),
+    GenreModel(slug: 'space', name: 'Space'),
+    GenreModel(slug: 'wuxia', name: 'Wuxia'),
+    GenreModel(slug: 'xianxia', name: 'Xianxia'),
+  ];
+
   Future<List<GenreModel>> genres() async {
-    final resp = await ApiClient.instance.get(ApiEndpoints.comicGenres);
-    return _asList(resp.data)
-        .map((e) => GenreModel.fromJson(Map<String, dynamic>.from(e)))
-        .toList();
+    try {
+      final resp = await ApiClient.instance.get(ApiEndpoints.comicGenres);
+      final apiList = _asList(resp.data)
+          .map((e) => GenreModel.fromJson(Map<String, dynamic>.from(e)))
+          .where((g) => g.slug.isNotEmpty && g.name.isNotEmpty)
+          .toList();
+
+      final map = <String, GenreModel>{};
+      for (final g in defaultComicGenres) {
+        map[g.slug.toLowerCase()] = g;
+      }
+      for (final g in apiList) {
+        map[g.slug.toLowerCase()] = g;
+      }
+      final list = map.values.toList();
+      list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      return list;
+    } catch (_) {
+      return defaultComicGenres;
+    }
   }
 
+  /// Memuat daftar komik berdasarkan genre secara andal (mendukung pagination dan fallback scraper)
   Future<List<ComicModel>> byGenre(String slug, {int page = 1}) async {
-    final resp = await ApiClient.instance.get(
-      ApiEndpoints.comicByGenre(slug),
-      queryParameters: {'page': page},
-    );
-    return _asList(resp.data).map((e) => ComicModel.fromJson(e)).toList();
+    final cleanSlug = slug.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9\-]'), '-');
+
+    // 1. Coba ambil langsung dari live endpoint mirror komiku (mendukung live paginasi)
+    try {
+      final pagePath = page > 1 ? 'page/$page/' : '';
+      final url = 'https://api.komiku.org/genre/$cleanSlug/$pagePath';
+      final resp = await ApiClient.instance.get(
+        url,
+        options: Options(
+          responseType: ResponseType.plain,
+          headers: {
+            'User-Agent': ApiClient.userAgent,
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          },
+        ),
+      );
+      if (resp.data is String && (resp.data as String).isNotEmpty) {
+        final parsed = parseKomikuBgeHtml(resp.data as String);
+        if (parsed.isNotEmpty) return parsed;
+      }
+    } catch (_) {}
+
+    // 2. Fallback ke endpoint backend
+    try {
+      final resp = await ApiClient.instance.get(
+        ApiEndpoints.comicByGenre(cleanSlug),
+        queryParameters: {'page': page},
+      );
+      final list = _asList(resp.data).map((e) => ComicModel.fromJson(e)).toList();
+      if (list.isNotEmpty) return list;
+    } catch (_) {}
+
+    // 3. Fallback pencarian teks jika halaman pertama
+    if (page == 1) {
+      try {
+        final searchResult = await search(cleanSlug.replaceAll('-', ' '));
+        if (searchResult.isNotEmpty) return searchResult;
+      } catch (_) {}
+    }
+
+    return [];
+  }
+
+  /// Parser HTML untuk kartu komik dari komiku
+  static List<ComicModel> parseKomikuBgeHtml(String html) {
+    final list = <ComicModel>[];
+    final blocks = html.split('<div class="bge">');
+    if (blocks.length <= 1) return list;
+
+    final slugRegex = RegExp(r'href="(?:https?://[^/"]+)?/(?:manga|komik)/([^/"]+)/?"');
+    final imgRegex = RegExp(r'<img[^>]+(?:src|data-src)="([^"]+)"');
+    final titleRegex = RegExp(r'<h3>\s*(.*?)\s*</h3>', dotAll: true);
+    final typeGenreRegex = RegExp(r'<div class="tpe1_inf">\s*(?:<b>([^<]+)</b>)?\s*([^<]*)', dotAll: true);
+    final chRegex = RegExp(r'href="/[^"]*chapter-([^/"]+)/?"[^>]*><span>([^<]+)</span>');
+    final altChRegex = RegExp(r'<span>(Chapter\s*[^<]+)</span>');
+    final descRegex = RegExp(r'<p>\s*(.*?)\s*</p>', dotAll: true);
+
+    for (var i = 1; i < blocks.length; i++) {
+      final block = blocks[i];
+      final slug = slugRegex.firstMatch(block)?.group(1);
+      if (slug == null || slug.isEmpty) continue;
+
+      final img = imgRegex.firstMatch(block)?.group(1);
+      final rawTitle = titleRegex.firstMatch(block)?.group(1);
+      final title = rawTitle != null ? _cleanHtml(rawTitle) : slug;
+
+      final typeMatch = typeGenreRegex.firstMatch(block);
+      final type = typeMatch?.group(1)?.trim();
+      final genre = typeMatch?.group(2)?.trim();
+
+      var ch = chRegex.firstMatch(block)?.group(2)?.trim();
+      ch ??= altChRegex.firstMatch(block)?.group(1)?.trim();
+
+      final desc = descRegex.firstMatch(block)?.group(1)?.trim();
+
+      list.add(ComicModel(
+        slug: slug,
+        title: title,
+        thumb: img != null ? ComicModel.normalizeThumbnailUrl(img) : null,
+        type: type != null && type.isNotEmpty ? type : null,
+        genre: genre != null && genre.isNotEmpty ? genre : null,
+        latestChapter: ch,
+        synopsis: desc != null && desc.isNotEmpty ? _cleanHtml(desc) : null,
+      ),);
+    }
+    return list;
+  }
+
+  static String _cleanHtml(String text) {
+    return text
+        .replaceAll(RegExp(r'<[^>]*>'), '')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#039;', "'")
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .trim();
   }
 
   /// Get alphabetical directory of comics with letter/type filters and pagination.

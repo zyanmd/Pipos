@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -13,13 +12,13 @@ import '../../anime/presentation/anime_search_screen.dart';
 import '../../auth/presentation/welcome_screen.dart';
 import '../../anime/presentation/anime_home_screen.dart';
 import '../../comic/presentation/comic_home_screen.dart';
-import '../../review/presentation/review_home_screen.dart';
+import '../../nobar/presentation/nobar_hub_screen.dart';
 import '../../profile/presentation/profile_screen.dart';
 import '../../profile/presentation/settings_screen.dart';
 import '../../update/services/app_update_service.dart';
 
 /// Main shell with floating floating bubble bottom navigation.
-/// Four tabs: Anime, Komik, Ulas, Profil — each with its own nested navigator.
+/// Four tabs: Anime, Komik, Komunitas, Profil — each with its own nested navigator.
 class RootShell extends StatefulWidget {
   const RootShell({super.key});
 
@@ -56,7 +55,7 @@ class _RootShellState extends State<RootShell> {
       ),
       _TabSpec(
         navigatorKey: _reviewKey,
-        builder: (_) => const ReviewHomeScreen(),
+        builder: (_) => const NobarHubScreen(isEmbedded: true),
       ),
       _TabSpec(
         navigatorKey: _profileKey,
@@ -274,9 +273,7 @@ class _RootShellState extends State<RootShell> {
     return PageView.builder(
       controller: _pageController,
       itemCount: _tabs.length,
-      physics: _isAtRoot
-          ? const BouncingScrollPhysics()
-          : const NeverScrollableScrollPhysics(),
+      physics: const NeverScrollableScrollPhysics(),
       onPageChanged: _onPageChanged,
       itemBuilder: (context, i) {
         final tab = _tabs[i];

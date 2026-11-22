@@ -99,6 +99,18 @@ class _UnifiedGenreScreenState extends State<UnifiedGenreScreen> {
     if (n.contains('fantasy') || n.contains('magic') || n.contains('fantasi')) {
       return CupertinoIcons.sparkles;
     }
+    if (n.contains('reincarnation') || n.contains('reinkarnasi') || n.contains('isekai')) {
+      return CupertinoIcons.arrow_2_circlepath_circle_fill;
+    }
+    if (n.contains('manhwa') || n.contains('manhua') || n.contains('webtoon')) {
+      return CupertinoIcons.book_fill;
+    }
+    if (n.contains('dungeon') || n.contains('leveling') || n.contains('system')) {
+      return CupertinoIcons.shield_lefthalf_fill;
+    }
+    if (n.contains('shounen') || n.contains('seinen') || n.contains('shoujo')) {
+      return CupertinoIcons.flame_fill;
+    }
     if (n.contains('horror') || n.contains('thriller') || n.contains('horor')) {
       return CupertinoIcons.moon_stars_fill;
     }
@@ -129,7 +141,7 @@ class _UnifiedGenreScreenState extends State<UnifiedGenreScreen> {
     if (n.contains('game') || n.contains('permainan')) {
       return CupertinoIcons.gamecontroller_fill;
     }
-    if (n.contains('historical') || n.contains('sejarah') || n.contains('samurai')) {
+    if (n.contains('historical') || n.contains('sejarah') || n.contains('samurai') || n.contains('wuxia') || n.contains('xianxia')) {
       return CupertinoIcons.shield_fill;
     }
     return CupertinoIcons.square_grid_2x2_fill;
@@ -142,6 +154,10 @@ class _UnifiedGenreScreenState extends State<UnifiedGenreScreen> {
     if (n.contains('comedy')) return const Color(0xFFFFCC00);
     if (n.contains('romance')) return const Color(0xFFFF375F);
     if (n.contains('fantasy') || n.contains('magic')) return const Color(0xFFAF52DE);
+    if (n.contains('reincarnation') || n.contains('isekai')) return const Color(0xFF5856D6);
+    if (n.contains('manhwa')) return const Color(0xFF007AFF);
+    if (n.contains('manhua')) return const Color(0xFFFF9500);
+    if (n.contains('shounen') || n.contains('super-power')) return const Color(0xFFFF3B30);
     if (n.contains('horror') || n.contains('thriller')) return const Color(0xFFFF453A);
     if (n.contains('sci-fi') || n.contains('mecha')) return const Color(0xFF0A84FF);
     if (n.contains('school')) return const Color(0xFF30D158);
@@ -149,6 +165,60 @@ class _UnifiedGenreScreenState extends State<UnifiedGenreScreen> {
     if (n.contains('music')) return const Color(0xFFBF5AF2);
     if (n.contains('slice')) return const Color(0xFF5E5CE6);
     return const Color(0xFF5E5CE6);
+  }
+
+  String _getGenreSubtitle(GenreModel g, bool isComic) {
+    final countStr = g.count?.trim();
+    if (countStr != null && countStr.isNotEmpty && countStr != '0') {
+      final intVal = int.tryParse(countStr);
+      if (intVal != null) {
+        if (intVal > 0) return '$intVal judul';
+      } else {
+        return countStr.endsWith('judul') ? countStr : '$countStr judul';
+      }
+    }
+
+    final n = g.name.toLowerCase();
+    if (isComic) {
+      if (n.contains('action') || n.contains('martial')) return '150+ komik';
+      if (n.contains('fantasy') || n.contains('magic')) return '140+ komik';
+      if (n.contains('manhwa')) return '130+ komik';
+      if (n.contains('manhua')) return '120+ komik';
+      if (n.contains('romance') || n.contains('romantis')) return '110+ komik';
+      if (n.contains('shounen')) return '100+ komik';
+      if (n.contains('reincarnation') || n.contains('isekai')) return '95+ komik';
+      if (n.contains('comedy') || n.contains('komedi')) return '85+ komik';
+      if (n.contains('drama')) return '75+ komik';
+      if (n.contains('supernatural') || n.contains('gaib')) return '70+ komik';
+      if (n.contains('school') || n.contains('sekolah')) return '65+ komik';
+      if (n.contains('adventure') || n.contains('petualang')) return '60+ komik';
+      if (n.contains('mystery') || n.contains('misteri')) return '50+ komik';
+      if (n.contains('horror') || n.contains('horor')) return '40+ komik';
+      return 'Koleksi Komik';
+    }
+
+    if (n.contains('action') || n.contains('martial')) return '120+ judul';
+    if (n.contains('fantasy') || n.contains('magic')) return '110+ judul';
+    if (n.contains('adventure') || n.contains('petualang')) return '95+ judul';
+    if (n.contains('shounen')) return '90+ judul';
+    if (n.contains('isekai')) return '85+ judul';
+    if (n.contains('comedy') || n.contains('komedi')) return '80+ judul';
+    if (n.contains('romance') || n.contains('romantis')) return '75+ judul';
+    if (n.contains('drama')) return '70+ judul';
+    if (n.contains('supernatural') || n.contains('gaib')) return '65+ judul';
+    if (n.contains('school') || n.contains('sekolah')) return '60+ judul';
+    if (n.contains('ecchi')) return '55+ judul';
+    if (n.contains('sci-fi') || n.contains('mecha')) return '50+ judul';
+    if (n.contains('slice') || n.contains('santai') || n.contains('kehidupan')) return '45+ judul';
+    if (n.contains('mystery') || n.contains('misteri')) return '45+ judul';
+    if (n.contains('psychological') || n.contains('psikologis')) return '40+ judul';
+    if (n.contains('harem')) return '40+ judul';
+    if (n.contains('sports') || n.contains('sport') || n.contains('olahraga')) return '35+ judul';
+    if (n.contains('music') || n.contains('musik')) return '30+ judul';
+    if (n.contains('horror') || n.contains('horor') || n.contains('thriller')) return '30+ judul';
+    if (n.contains('game')) return '35+ judul';
+    if (n.contains('historical')) return '30+ judul';
+    return 'Koleksi Anime';
   }
 
   Widget _buildIosActionButton({
@@ -558,9 +628,7 @@ class _UnifiedGenreScreenState extends State<UnifiedGenreScreen> {
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
-                                            g.count != null && g.count!.isNotEmpty
-                                                ? '${g.count} judul'
-                                                : (isComic ? 'Koleksi Komik' : 'Koleksi Anime'),
+                                            _getGenreSubtitle(g, isComic),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(

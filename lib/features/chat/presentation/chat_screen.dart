@@ -35,6 +35,7 @@ import '../../anime/presentation/anime_detail_screen.dart';
 import '../../comic/data/comic_repository.dart';
 import '../../comic/data/models/comic_model.dart';
 import '../../comic/presentation/comic_detail_screen.dart';
+import '../../review/presentation/review_home_screen.dart';
 import '../../../shared/widgets/app_network_image.dart';
 import 'widgets/giphy_picker_modal.dart';
 
@@ -42,8 +43,17 @@ class ChatScreen extends StatefulWidget {
   final String? initialText;
   final String? initialFilter;
   final int? targetMessageId;
+  final bool isEmbedded;
+  final Widget? headerTitleWidget;
 
-  const ChatScreen({super.key, this.initialText, this.initialFilter, this.targetMessageId});
+  const ChatScreen({
+    super.key,
+    this.initialText,
+    this.initialFilter,
+    this.targetMessageId,
+    this.isEmbedded = false,
+    this.headerTitleWidget,
+  });
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -1218,17 +1228,20 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F0F12) : const Color(0xFFF2F2F7),
-      appBar: AppBar(
+      appBar: widget.isEmbedded ? null : AppBar(
         backgroundColor: isDark ? const Color(0xFF16161A) : Colors.white,
         elevation: 0.5,
-        titleSpacing: 0,
-        leading: IconButton(
-          icon: Icon(
-            CupertinoIcons.back,
-            color: isDark ? Colors.white : Colors.black,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
+        titleSpacing: widget.isEmbedded ? 16 : 0,
+        automaticallyImplyLeading: !widget.isEmbedded,
+        leading: widget.isEmbedded
+            ? null
+            : IconButton(
+                icon: Icon(
+                  CupertinoIcons.back,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+                onPressed: () => Navigator.pop(context),
+              ),
         title: _isSearchOpen
             ? Padding(
                 padding: const EdgeInsets.only(right: 8),
@@ -1243,47 +1256,43 @@ class _ChatScreenState extends State<ChatScreen> {
                   },
                 ),
               )
-            : Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFFF2D55), Color(0xFFFF375F)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(11),
-                      boxShadow: [
-                        BoxShadow(
-                          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.15),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
+            : (widget.headerTitleWidget ??
+                Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFF2D55), Color(0xFFFF375F)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                      ],
-                    ),
-                    child: const Icon(CupertinoIcons.chat_bubble_2_fill, color: Colors.white, size: 20),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Chat Komunitas',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: isDark ? Colors.white : Colors.black,
+                        borderRadius: BorderRadius.circular(11),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFFF2D55).withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                      child: const Icon(CupertinoIcons.bubble_left_bubble_right_fill, color: Colors.white, size: 19),
                     ),
-                  ),
-                ],
-              ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Komunitas',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? Colors.white : Colors.black,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                    ),
+                  ],
+                )),
         actions: [
           IconButton(
             icon: Icon(
@@ -1302,6 +1311,18 @@ class _ChatScreenState extends State<ChatScreen> {
               });
             },
           ),
+          IconButton(
+            icon: Icon(
+              CupertinoIcons.square_pencil,
+              size: 20,
+              color: isDark ? Colors.white70 : Colors.black54,
+            ),
+            tooltip: 'Feed Ulasan',
+            onPressed: () => Navigator.push(
+              context,
+              CupertinoPageRoute(builder: (_) => const ReviewHomeScreen()),
+            ),
+          ),
           UniversalNotificationButton(
             size: 34,
             padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -1319,6 +1340,8 @@ class _ChatScreenState extends State<ChatScreen> {
         ],
       ),
       body: SafeArea(
+        top: !widget.isEmbedded,
+        bottom: true,
         child: Column(
           children: [
             _buildFilterBar(isDark),
@@ -1674,9 +1697,27 @@ class _ChatScreenState extends State<ChatScreen> {
 
     final isHighlighted = _highlightedMessageId == msg.id;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('chat_msg_${msg.id}'),
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value.clamp(0.0, 1.0),
+          child: Transform.translate(
+            offset: Offset(0, (1.0 - value) * 14),
+            child: Transform.scale(
+              scale: 0.93 + (value * 0.07),
+              alignment: isOwner ? Alignment.centerRight : Alignment.centerLeft,
+              child: child,
+            ),
+          ),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
         mainAxisAlignment: isOwner ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -2060,6 +2101,7 @@ class _ChatScreenState extends State<ChatScreen> {
           ],
         ],
       ),
+    ),
     );
   }
 
@@ -2671,8 +2713,14 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildInputBar(bool isDark, bool isAuthenticated) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final isKeyboardOpen = bottomInset > 0;
+    final bottomPad = widget.isEmbedded && !isKeyboardOpen
+        ? (MediaQuery.of(context).padding.bottom + 78)
+        : 10.0;
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(6, 8, 10, 10),
+      padding: EdgeInsets.fromLTRB(6, 8, 10, bottomPad),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF16161A) : Colors.white,
         border: Border(

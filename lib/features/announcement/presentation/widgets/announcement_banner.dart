@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../shared/widgets/glass_container.dart';
 import '../../data/models/announcement_model.dart';
 import '../../data/announcement_repository.dart';
 import '../app_features_screen.dart';
@@ -430,20 +431,18 @@ class _AnnouncementBannerState extends State<AnnouncementBanner> {
 
         return Padding(
           padding: widget.margin ?? const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF1E1E24) : const Color(0xFFF2F2F7),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isDark ? Colors.white12 : Colors.black.withValues(alpha: 0.06),
-                width: 0.5,
-              ),
+          child: GlassContainer(
+            borderRadius: BorderRadius.circular(14),
+            blur: 10,
+            border: Border.all(
+              color: isDark ? Colors.white.withValues(alpha: 0.15) : Colors.black.withValues(alpha: 0.08),
+              width: 0.8,
             ),
             child: Material(
               color: Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(14),
               child: InkWell(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
                 onTap: () {
                   HapticFeedback.lightImpact();
                   AnnouncementBanner.showDetail(context, item);
@@ -480,7 +479,7 @@ class _AnnouncementBannerState extends State<AnnouncementBanner> {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            item.badge.toUpperCase(),
+                            item.badge.replaceAll(RegExp(r'[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]', unicode: true), '').trim().toUpperCase(),
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
@@ -495,7 +494,7 @@ class _AnnouncementBannerState extends State<AnnouncementBanner> {
                       // Title
                       Expanded(
                         child: Text(
-                          item.title,
+                          item.title.replaceAll(RegExp(r'[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]', unicode: true), '').trim(),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(

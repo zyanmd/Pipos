@@ -132,11 +132,11 @@ class ComicModel {
     return null;
   }
 
-  /// Normalisasi URL thumbnail agar selalu mengarah ke protokol HTTPS yang valid dan mirror CDN komiku yang aktif (thumbnail.komiku.org)
+  /// Normalisasi URL thumbnail agar selalu mengarah ke protokol HTTPS yang valid dan mirror CDN komiku yang aktif (thumbnail.komiku.org).
+  /// Menghapus parameter kompresi dan downscale rendah (?resize=240,150) agar poster tampil dalam kualitas HD asli.
   static String normalizeThumbnailUrl(String url) {
     var u = url.trim();
     if (u.isEmpty) return '';
-    // Replace dead thumbnail.komiku.to with live Cloudflare mirror thumbnail.komiku.org
     if (u.contains('thumbnail.komiku.to')) {
       u = u.replaceAll('thumbnail.komiku.to', 'thumbnail.komiku.org');
     }
@@ -144,10 +144,37 @@ class ComicModel {
       return 'https:$u';
     }
     if (u.startsWith('http://thumbnail.komiku.org')) {
-      return u.replaceFirst('http://', 'https://');
+      u = u.replaceFirst('http://', 'https://');
     }
     if (u.startsWith('/img/upload/')) {
       return 'https://thumbnail.komiku.org$u';
+    }
+    // Hapus parameter downscale rendah agar gambar selalu tajam HD
+    u = u.replaceAll(RegExp(r'[?&]resize=\d+,\d+'), '');
+    if (u.endsWith('?') || u.endsWith('&')) {
+      u = u.substring(0, u.length - 1);
+    }
+    if (!u.contains('?') && u.contains('&')) {
+      final firstAmp = u.indexOf('&');
+      u = '${u.substring(0, firstAmp)}?${u.substring(firstAmp + 1)}';
+    }
+    return u;
+  }
+
+  /// Mengubah URL thumbnail/poster komik menjadi kualitas HD asli tanpa blur
+  static String? toHdUrl(String? url) {
+    if (url == null || url.trim().isEmpty) return null;
+    var u = normalizeThumbnailUrl(url);
+    u = u.replaceAll(RegExp(r'[?&]resize=\d+,\d+'), '');
+    u = u.replaceAll(RegExp(r'[?&]w=\d+'), '');
+    u = u.replaceAll(RegExp(r'[?&]h=\d+'), '');
+    u = u.replaceAll(RegExp(r'[?&]quality=\d+'), '');
+    if (u.endsWith('?') || u.endsWith('&')) {
+      u = u.substring(0, u.length - 1);
+    }
+    if (!u.contains('?') && u.contains('&')) {
+      final firstAmp = u.indexOf('&');
+      u = '${u.substring(0, firstAmp)}?${u.substring(firstAmp + 1)}';
     }
     return u;
   }
@@ -251,11 +278,20 @@ class ComicDetailModel {
       }
     }
     final genres = <String>[];
-    final g = j['genres'];
+    final g = j['genres'] ?? j['genre'] ?? j['tags'];
     if (g is List) {
-      genres.addAll(g.map((e) => e.toString()));
-    } else if (g is String) {
-      genres.addAll(g.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty));
+      for (final e in g) {
+        if (e is Map) {
+          final n = e['name'] ?? e['title'] ?? e['genre'] ?? e['label'];
+          if (n != null && n.toString().trim().isNotEmpty) {
+            genres.add(n.toString().trim());
+          }
+        } else if (e != null && e.toString().trim().isNotEmpty) {
+          genres.add(e.toString().trim());
+        }
+      }
+    } else if (g is String && g.trim().isNotEmpty) {
+      genres.addAll(g.split(RegExp(r'[,|•/]')).map((s) => s.trim()).where((s) => s.isNotEmpty));
     }
 
     final thumb = ComicModel.extractThumbnail(j);

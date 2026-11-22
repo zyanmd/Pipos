@@ -444,7 +444,36 @@ class _JavPlayerScreenState extends State<JavPlayerScreen>
 
                             // Video Details, Meta & Related
                             Expanded(
-                              child: _buildDetailsList(isDark),
+                              child: NotificationListener<ScrollNotification>(
+                                onNotification: (notification) {
+                                  if (_isFullscreen) return false;
+                                  // Hanya trigger fullscreen jika ditarik ke bawah secara sengaja (overscroll > 60-70px)
+                                  if (notification is OverscrollNotification &&
+                                      notification.overscroll < -60.0) {
+                                    HapticFeedback.mediumImpact();
+                                    _enterFullscreen();
+                                    return true;
+                                  }
+                                  if (notification is ScrollUpdateNotification) {
+                                    final pixels = notification.metrics.pixels;
+                                    if (pixels < -70.0) {
+                                      HapticFeedback.mediumImpact();
+                                      _enterFullscreen();
+                                      return true;
+                                    }
+                                  }
+                                  if (notification is ScrollEndNotification) {
+                                    final pixels = notification.metrics.pixels;
+                                    if (pixels < -50.0) {
+                                      HapticFeedback.mediumImpact();
+                                      _enterFullscreen();
+                                      return true;
+                                    }
+                                  }
+                                  return false;
+                                },
+                                child: _buildDetailsList(isDark),
+                              ),
                             ),
                           ],
                         ),
